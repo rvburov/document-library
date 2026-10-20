@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Библиотека PDF
+Comment=Поиск и чтение PDF-документов
+Exec=PdfLibrary
+Icon=pdflibrary
+Terminal=false
+Categories=Office;Utility;
+StartupWMClass=PdfLibrary

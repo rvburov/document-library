@@ -1,0 +1,171 @@
+# Полная проверка кода на всех операционных системах: сборка, тесты, стенд экранов, D-Bus.
+#
+# Запускается ТОЛЬКО по команде — пушем ветки `ci` или кнопкой на вкладке Actions.
+# Обычный `git push` не запускает ничего: триггера на master здесь нет намеренно.
+#
+# Команда на стороне разработчика одна — `git push actions`. Она отправляет master и заодно
+# перематывает ветку `ci`; удаленный репозиторий `actions` заводит Scripts/ci/setup-remote.sh,
+# один раз в копии репозитория.
+#
+# Ветка `ci` живет только на время прогона: GitHub умеет ловить push ветки или тега и ничего
+# больше, поэтому без нее запуска не сделать, — но последний job ее удаляет, и в репозитории
+# постоянно висит одна master. Все checkout'ы поэтому пришпилены к github.sha, а не к ссылке.
+#
+# С выпуском релиза не пересекается ни во времени, ни по файлам:
+#   • выпуск пушит master и тег `v*` — под фильтр `branches: [ci]` не подпадает ни то, ни другое;
+#   • отсюда не вызывается ни один скрипт репозитория, только `dotnet`.
+# Поэтому любой из двух модулей удаляется, не задевая другой.
+#
+# Описание и порядок удаления — docs/developer/guides/ci.md.
+name: Build
+
+on:
+  push:
+    branches: [ci]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Отправили ветку `ci` второй раз, пока идет первый прогон, — старый отменяется, проверяется
+# только последний код. Отменять здесь безопасно: прогон ничего не публикует и никуда не пишет.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+
+# Явный `shell: bash` на весь файл, а не только ради одинакового шелла на трех ОС. Умолчание
+# GitHub — `bash -e`, БЕЗ pipefail: в шаге `dotnet test … | tee` код возврата взялся бы от tee,
+# и упавшие тесты уехали бы в зеленый прогон. С этой строкой шелл везде `bash -eo pipefail`.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ── Сборка и тесты на каждой операционной системе ───────────────────────────
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      # Без fail-fast: упавшая платформа не отменяет остальные, иначе за прогон видно одну
+      # поломку из четырех — а смысл прогона ровно в том, чтобы увидеть все сразу.
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  name: Linux }
+          - { os: windows-latest, name: Windows }
+          - { os: macos-latest,   name: macOS Apple Silicon }
+          # Единственное место, где код вообще ЗАПУСКАЕТСЯ под x86_64-macOS: сборка osx-x64
+          # в релизе кросс-компилируется на arm64-раннере, и там проверяется только архитектура
+          # бинаря. Здесь под x64 работают нативные SQLite, SkiaSharp и PDFium.
+          #
+          # Метка macos-15-intel, а НЕ macos-13: тот образ GitHub вывел в декабре 2025, и job
+          # с ним не падает, а бесконечно висит в очереди — раннера с такой меткой просто нет.
+          - { os: macos-15-intel, name: macOS Intel }
+    steps:
+      # Пришпилено к коммиту, а не к ссылке: ветка `ci` удаляется в конце прогона, и checkout
+      # по `refs/heads/ci` стал бы зависеть от того, кто успел раньше. Коммит же остается
+      # достижим из master всегда.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+          # cache НЕ включаем: он выставляет NUGET_PACKAGES и перебивает globalPackagesFolder
+          # из nuget.config — поведение CI разошлось бы с локальным.
+
+      # Собираются ОБА таргета — net10.0 и net10.0-windows10.0.17763. Второй нужен ради
+      # системных уведомлений Windows и на Linux с macOS компилируется благодаря
+      # EnableWindowsTargeting. Тесты его не трогают (Tests/* ссылаются на базовый net10.0).
+      #
+      # Публикации (single-file, self-contained) здесь нет намеренно: упаковка продукта — работа
+      # выпуска релиза, а не проверки кода.
+      - name: Сборка приложения
+        run: dotnet build PdfLibrary.csproj --configuration Release
+
+      - name: Модульные тесты
+        run: dotnet test Tests/Unit --configuration Release --logger 'console;verbosity=minimal'
+
+      # Настоящая SQLite, настоящие PDF и PDFium каждой платформы: именно здесь системы и
+      # расходятся — регистр имен файлов, разделители путей, наблюдение за папками.
+      - name: Интеграционные тесты
+        run: dotnet test Tests/Integration --configuration Release --logger 'console;verbosity=minimal'
+
+      # Живая Avalonia без экрана на каждой ОС: Skia и шрифты у систем свои. Расхождение — код
+      # возврата 1, и job краснеет.
+      - name: Стенд экранов
+        run: dotnet run --project Tests/Screens --configuration Release -- screens
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screens-${{ runner.os }}-${{ runner.arch }}
+          path: screens/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Единственное место, где вообще выполняется связка с D-Bus. Пакеты
+      # DesktopNotifications.FreeDesktop и Tmds.DBus разъезжаются по версиям молча: сборка
+      # проходит, а на машине пользователя менеджер падает, и Program.CreateNotificationManager
+      # это исключение проглатывает — приложение стартует, баннеров нет, снаружи не видно.
+      #
+      # dbus-run-session поднимает шину сеанса на время команды; без нее тест ушел бы в Skipped
+      # вместе с обычным прогоном выше. Демон уведомлений не нужен: проверяется, что вызовы
+      # доходят до Tmds.DBus, а не что баннер нарисовался.
+      - name: Уведомления Linux
+        if: runner.os == 'Linux'
+        run: |
+          command -v dbus-run-session > /dev/null || sudo apt-get install -y -qq dbus
+          dbus-run-session -- dotnet test Tests/Integration --configuration Release \
+            --filter 'FullyQualifiedName~LinuxNotificationsTests' \
+            --logger 'console;verbosity=minimal' | tee dbus.log
+
+      # Тест помечен SkippableFact: без этой проверки не поднявшаяся шина дала бы зеленый шаг,
+      # ничего не проверивший, — а именно ради него шаг и добавлен.
+      - name: Убедиться, что связка с D-Bus проверена
+        if: runner.os == 'Linux'
+        run: |
+          grep -qE 'Skipped: *0' dbus.log \
+            || { echo "::error::тест уведомлений ушел в Skipped — шина D-Bus не поднялась"; exit 1; }
+
+  # ── Уборка служебной ветки ──────────────────────────────────────────────────
+  # Ветка `ci` нужна ровно затем, чтобы у запуска был сигнал: GitHub ловит push ветки или тега
+  # и ничего больше. Существовать после прогона ей незачем — в репозитории должна оставаться
+  # одна master.
+  #
+  # Единственный job с правом записи, и право узкое: удалить одну ссылку. Ни релиз, ни код,
+  # ни настройки ему недоступны.
+  cleanup:
+    name: Убрать ветку ci
+    needs: [test]
+    # always(): ветка должна исчезнуть и после красного прогона, и после отмененного — иначе
+    # ровно неудачные запуски и оставляли бы за собой мусор.
+    # Проверка ссылки: при ручном запуске с master удалять нечего и не нужно.
+    if: always() && github.ref == 'refs/heads/ci'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # Через API, а не `git push --delete`: checkout здесь не нужен вовсе — ни одного файла
+      # репозитория этот job не читает.
+      - name: Удалить ветку
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/ci" 2>err.log; then
+            echo "ветка ci удалена"
+          else
+            # Не ошибка: ветку мог уже убрать предыдущий прогон, отмененный по concurrency.
+            # Валить из-за этого зеленую проверку кода нельзя — предупреждения достаточно,
+            # а следующий `git push actions` пересоздаст ветку и уберет ее снова.
+            echo "::warning::не удалось удалить ветку ci: $(cat err.log)"
+          fi

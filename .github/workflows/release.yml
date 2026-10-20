@@ -1,0 +1,373 @@
+# Сборка и публикация релиза «Библиотеки PDF».
+#
+# Запускается ТОЛЬКО пушем тега вида v1.0.4 или вручную с вкладки Actions. Обычный push в
+# ветку не запускает ничего: триггеров `push: branches` и `pull_request` здесь нет намеренно.
+#
+# Локальная половина процесса — Scripts/github-release/release.sh (правит версию, ставит тег, пушит).
+# Полное описание — docs/developer/guides/release.md.
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Существующий тег, например v1.0.4 — пересборка без сдвига тега'
+        required: true
+      draft:
+        description: 'Создать черновик вместо публикации (черновик виден только вам)'
+        type: boolean
+        default: false
+
+# Права по умолчанию — только чтение. Запись включается ровно в одном job — publish.
+permissions:
+  contents: read
+
+# Два прогона одного тега не идут параллельно, но и не отменяют друг друга: прерванная
+# на середине публикация хуже, чем ожидание.
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  # ── Гейт: дешевые проверки до дорогой сборки ────────────────────────────────
+  gate:
+    name: Проверки
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0          # нужен для проверки «тег — предок master»
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          # cache НЕ включаем: он выставляет NUGET_PACKAGES и перебивает globalPackagesFolder
+          # из nuget.config — поведение CI разошлось бы с локальным.
+
+      # Тег приходит либо из события push, либо из поля ручного запуска. Второе — свободный
+      # текст от человека, поэтому он проходит через env, а не подставляется в тело скрипта,
+      # и сразу проверяется по формату.
+      - name: Разобрать тег
+        id: ver
+        env:
+          RAW_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if ! printf '%s' "$RAW_TAG" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' > /dev/null; then
+            echo "::error::Тег «$RAW_TAG» не в формате vX.Y.Z"
+            exit 1
+          fi
+          echo "tag=$RAW_TAG"          >> "$GITHUB_OUTPUT"
+          echo "version=${RAW_TAG#v}"  >> "$GITHUB_OUTPUT"
+
+      # Единственное место, где сверяется «тег == код». Локальный release.sh этого сделать
+      # не может: он тег и создает. Расхождение — отказ, без попыток что-то починить: иначе
+      # опубликованный релиз перестанет соответствовать коммиту, на который указывает тег.
+      - name: Согласованность версий
+        env:
+          VER: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          bash Scripts/github-release/check-version.sh "$VER" || {
+            echo "::error::Тег $TAG не соответствует версии в коде. Удалите тег и перевыпустите:"
+            echo "::error::git push --delete origin $TAG && git tag -d $TAG && Scripts/github-release/release.sh $VER"
+            exit 1
+          }
+
+      - name: Тег указывает на коммит из master
+        run: |
+          git fetch --quiet origin master
+          git merge-base --is-ancestor HEAD origin/master \
+            || { echo "::error::Тег стоит на коммите, которого нет в master"; exit 1; }
+
+      - name: Модульные тесты
+        run: dotnet test Tests/Unit --configuration Release --logger 'console;verbosity=minimal'
+
+      - name: Интеграционные тесты
+        run: dotnet test Tests/Integration --configuration Release --logger 'console;verbosity=minimal'
+
+      # Живая Avalonia без экрана: экраны грузятся, поиск и панель чтения работают. Выпускать
+      # релиз, у которого не открывается окно, нельзя.
+      - name: Стенд экранов
+        run: dotnet run --project Tests/Screens --configuration Release
+
+  # ── Сборка: четыре платформы параллельно ────────────────────────────────────
+  build:
+    name: Сборка ${{ matrix.rid }}
+    needs: gate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Без fail-fast: одна упавшая платформа не должна отменять остальные, иначе за прогон
+      # видно только первую поломку.
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: win-x64,   os: windows-latest, script: windows-build.sh }
+          - { rid: linux-x64, os: ubuntu-latest,  script: linux-build.sh }
+          - { rid: osx-arm64, os: macos-latest,   script: macos-build.sh }
+          - { rid: osx-x64,   os: macos-latest,   script: macos-build.sh }
+    defaults:
+      run:
+        shell: bash        # одинаковый шелл на всех трех ОС; *.sh лежат в LF (.gitattributes)
+    env:
+      VER: ${{ needs.gate.outputs.version }}
+      RID: ${{ matrix.rid }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Версию скрипту НЕ передаем третьим аргументом: он взял бы ее из аргумента и заодно
+      # переписал csproj и README прямо здесь — и гейт перестал бы что-либо гарантировать.
+      # Версия уже лежит в csproj и уже сверена с тегом.
+      - name: Сборка
+        run: bash "Scripts/${{ matrix.script }}" "$RID" Release
+
+      - name: Проверка сборки — Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $out = "dist/Version ${env:VER}/${env:RID}"
+          if (-not (Test-Path -LiteralPath "$out/PdfLibrary.exe"))       { throw "Нет PdfLibrary.exe" }
+          if (-not (Test-Path -LiteralPath "$out/PdfLibrary-Setup.exe")) { throw "Нет PdfLibrary-Setup.exe" }
+          $exe = Get-Item -LiteralPath "$out/PdfLibrary.exe"
+          if ($exe.Length -lt 50MB) { throw "Слишком маленький .exe: $($exe.Length) байт" }
+          $pv = $exe.VersionInfo.ProductVersion
+          # SDK может дописать «+<хеш коммита>» — сравниваем по началу строки.
+          if ($pv -notlike "${env:VER}*") { throw "ProductVersion = $pv, ожидалось ${env:VER}" }
+          Write-Host "PdfLibrary.exe $pv, $([math]::Round($exe.Length/1MB)) МБ"
+
+      # Проверяется именно то, что уедет пользователю, — бандл установщика.
+      - name: Проверка сборки — macOS
+        if: runner.os == 'macOS'
+        run: |
+          SETUP="dist/Version $VER/$RID/PdfLibrary-Setup.app"
+          [ -d "$SETUP" ] || { echo "::error::нет бандла установщика"; exit 1; }
+          V="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$SETUP/Contents/Info.plist")"
+          [ "$V" = "$VER" ] || { echo "::error::Info.plist: $V, ожидалось $VER"; exit 1; }
+          [ -x "$SETUP/Contents/MacOS/PdfLibrary" ] || { echo "::error::нет бита +x"; exit 1; }
+          # Матрица могла собрать не тот RID — сверяем архитектуру бинаря.
+          ARCH="$(lipo -archs "$SETUP/Contents/MacOS/PdfLibrary")"
+          case "$RID" in
+            osx-arm64) [ "$ARCH" = "arm64" ]  || { echo "::error::$RID собран как $ARCH"; exit 1; } ;;
+            osx-x64)   [ "$ARCH" = "x86_64" ] || { echo "::error::$RID собран как $ARCH"; exit 1; } ;;
+          esac
+          echo "PdfLibrary-Setup.app $V, $ARCH"
+
+      - name: Проверка сборки — Linux
+        if: runner.os == 'Linux'
+        run: |
+          OUT="dist/Version $VER/linux-x64"
+          [ -x "$OUT/PdfLibrary-Setup" ] || { echo "::error::нет установщика"; exit 1; }
+          file "$OUT/PdfLibrary-Setup" | grep ELF > /dev/null || { echo "::error::это не ELF"; exit 1; }
+          SIZE="$(stat -c%s "$OUT/PdfLibrary-Setup")"
+          [ "$SIZE" -gt 52428800 ] || { echo "::error::слишком маленький бинарь: $SIZE байт"; exit 1; }
+          # Точной проверки версии на Linux нет: у single-file ELF нет штатных метаданных
+          # версии, а читать ее из приложения было бы можно только флагом --version, которого
+          # намеренно не добавляли (модуль не правит боевой код). Мягкий поиск строки —
+          # предупреждение, не отказ. Windows и macOS сверяют версию точно, и все четыре
+          # платформы собираются из одного коммита с уже проверенным <Version>.
+          grep -aq "$VER" "$OUT/PdfLibrary-Setup" || echo "::warning::версия $VER не найдена в бинаре"
+          echo "PdfLibrary-Setup $(( SIZE / 1048576 )) МБ"
+
+      # ── Упаковка ──────────────────────────────────────────────────────────
+      # Раздается РОВНО ОДИН файл на платформу — установщик PdfLibrary-Setup. Обычный
+      # PdfLibrary из dist/ не публикуется: это тот же бинарь, и установщик ставит его сам.
+      #
+      # Имя менять нельзя ни при каких обстоятельствах: режим установки включается по
+      # окончанию имени «-Setup» (Program.cs, ResolveMode). Поэтому версия и платформа
+      # уходят в имя АРХИВА, а файл внутри остается PdfLibrary-Setup.
+      #
+      # В архиве ровно один элемент — тогда распаковка не создает папку-обертку. Именно
+      # из-за нескольких элементов macOS раньше делал каталог «PdfLibrary-1» (Archive
+      # Utility обрезает имя архива по первой точке).
+      #
+      # LICENSE и THIRD-PARTY-NOTICES.txt в архивы не кладутся — они идут отдельными
+      # вложениями релиза (см. job publish), чтобы не мешаться в скачанной папке.
+
+      # Ad-hoc подпись. Карантин она не снимает, но отличает «неизвестный разработчик»
+      # (обходится) от «приложение повреждено» (не обходится вовсе). Делается здесь,
+      # а не в Scripts/macos-build.sh: модуль не правит существующие файлы.
+      # macOS раздается образом .dmg, а не архивом. Смысл не в формате: окно образа —
+      # единственное место, где можно показать инструкцию ДО того, как Gatekeeper заблокирует
+      # запуск. Само приложение этого сделать не может — его к тому моменту еще не запустили.
+      - name: Упаковка — macOS
+        if: runner.os == 'macOS'
+        run: |
+          SETUP="dist/Version $VER/$RID/PdfLibrary-Setup.app"
+          DMG="pkg/PdfLibrary-$VER-$RID.dmg"
+          # Имя тома без версии и без пробелов: Finder адресует том по имени, а не по точке
+          # монтирования, и это же имя становится заголовком окна. Версия и так в имени .dmg.
+          VOL="PdfLibrary"
+          mkdir -p pkg stage/.background
+
+          # Обязательно перед подписью: codesign отказывается работать, если на файлах бандла
+          # остались расширенные атрибуты («resource fork, Finder information, or similar
+          # detritus not allowed»). Достаточно одного com.apple.provenance, который macOS
+          # вешает при копировании файлов.
+          xattr -cr "$SETUP"
+          codesign --force --deep --sign - "$SETUP"
+          cp -R "$SETUP" stage/
+
+          # Фон окна с инструкцией. Рисуется кодом, картинок в репозитории нет.
+          # Две плотности склеиваются в один TIFF, иначе на retina текст выходит мылом.
+          swift Scripts/github-release/dmg-background.swift stage/.background
+          tiffutil -cathidpicheck stage/.background/background.png \
+                                  stage/.background/background@2x.png \
+                   -out stage/.background/background.tiff
+          rm stage/.background/background.png stage/.background/background@2x.png
+
+          # Образ собирается в два приема: сначала записываемый (UDRW), чтобы Finder мог
+          # разложить окно, потом сжатый только для чтения (UDZO) — он и уезжает в релиз.
+          hdiutil create -quiet -srcfolder stage -volname "$VOL" -fs HFS+ -format UDRW -ov rw.dmg
+          hdiutil attach -quiet -mountpoint "/Volumes/$VOL" rw.dmg
+
+          # Оформление окна. Разговор с Finder через AppleScript — единственное здесь, что
+          # может не сработать на раннере без полноценного графического сеанса. Поэтому шаг
+          # не валит сборку: без оформления образ остается рабочим, просто без инструкции.
+          osascript <<'APPLESCRIPT' || echo "::warning::Finder не оформил окно — образ собран без инструкции"
+            tell application "Finder"
+              tell disk "PdfLibrary"
+                open
+                set current view of container window to icon view
+                set toolbar visible of container window to false
+                set statusbar visible of container window to false
+                set the bounds of container window to {200, 120, 840, 590}
+                set opts to the icon view options of container window
+                set arrangement of opts to not arranged
+                set icon size of opts to 128
+                set label position of opts to bottom
+                set background picture of opts to file ".background:background.tiff"
+                set position of item "PdfLibrary-Setup.app" of container window to {320, 78}
+                close
+                open
+                update without registering applications
+                delay 2
+              end tell
+            end tell
+          APPLESCRIPT
+
+          hdiutil detach -quiet "/Volumes/$VOL"
+          hdiutil convert -quiet rw.dmg -format UDZO -imagekey zlib-level=9 -o "$DMG"
+          rm -f rw.dmg
+
+          # Контрольное монтирование: внутри ровно один видимый элемент, бит +x и подпись целы.
+          hdiutil attach -quiet -nobrowse -mountpoint /Volumes/pl-check "$DMG"
+          [ "$(find /Volumes/pl-check -mindepth 1 -maxdepth 1 -not -name '.*' | wc -l | tr -d ' ')" = "1" ] \
+            || { echo "::error::в образе не один элемент"; hdiutil detach -quiet /Volumes/pl-check; exit 1; }
+          [ -x "/Volumes/pl-check/PdfLibrary-Setup.app/Contents/MacOS/PdfLibrary" ] \
+            || { echo "::error::в образе потерян бит +x"; hdiutil detach -quiet /Volumes/pl-check; exit 1; }
+          codesign -v "/Volumes/pl-check/PdfLibrary-Setup.app" \
+            || { echo "::error::подпись не пережила упаковку"; hdiutil detach -quiet /Volumes/pl-check; exit 1; }
+          hdiutil detach -quiet /Volumes/pl-check
+
+      - name: Упаковка — Linux
+        if: runner.os == 'Linux'
+        run: |
+          OUT="dist/Version $VER/linux-x64"
+          TGZ="pkg/PdfLibrary-$VER-linux-x64.tar.gz"
+          mkdir -p pkg
+          # tar, а не zip: zip теряет бит запуска, и после распаковки штатным «Извлечь»
+          # в GNOME бинарь оказывается незапускаемым. -C + имя файла → в архиве один элемент.
+          tar -czf "$TGZ" -C "$OUT" PdfLibrary-Setup
+          # Проверка через awk, а не «| grep -q»: grep закрывает канал на первом совпадении,
+          # tar получает SIGPIPE, и pipefail роняет весь шаг при найденном совпадении.
+          # awk дочитывает поток до конца, а разбор по полям не зависит от раскладки колонок.
+          tar -tvzf "$TGZ" \
+            | awk '$1 ~ /^-rwx/ && $NF == "PdfLibrary-Setup" { f = 1 } END { exit !f }' \
+            || { echo "::error::в архиве потерян бит +x"; exit 1; }
+          [ "$(tar -tzf "$TGZ" | wc -l | tr -d ' ')" = "1" ] \
+            || { echo "::error::в архиве не один элемент"; exit 1; }
+
+      # Windows-установщик кладется как есть, без архива: это единственный файл, он
+      # запускается сразу после скачивания, и имя доезжает до пользователя нетронутым.
+      - name: Упаковка — Windows
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p pkg
+          cp "dist/Version $VER/win-x64/PdfLibrary-Setup.exe" pkg/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.rid }}
+          path: pkg/*
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0     # содержимое уже сжато, повторное сжатие только жжет время
+
+  # ── Публикация: единственный job с правом записи ────────────────────────────
+  publish:
+    name: Публикация
+    needs: [gate, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.gate.outputs.tag }}
+      VER: ${{ needs.gate.outputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          pattern: pkg-*
+          merge-multiple: true     # четыре архива ложатся в одну плоскую папку
+
+      # Во вложениях только программа — по одному установщику на платформу. Ни файла
+      # контрольных сумм (GitHub показывает sha256 у каждого вложения сам), ни LICENSE,
+      # ни THIRD-PARTY-NOTICES.txt: оба лежат в корне репозитория и доступны со страницы
+      # проекта. Решение владельца — страница релиза остается местом, где скачивают
+      # программу, и ничем больше.
+      - name: Вложения
+        run: ls -lh assets/
+
+      - name: Тело релиза
+        run: bash Scripts/github-release/release-notes.sh "$VER" > notes.md
+
+      # Создание и обновление одной командой: повторный прогон на существующем теге
+      # перезаписывает файлы и заметки, но НЕ трогает тег и коммит — GitHub привязывает
+      # опубликованный релиз к тегу навсегда.
+      - name: Создать или обновить релиз
+        env:
+          # Пусто при пуше тега (публикуем сразу), true при ручном запуске (черновик).
+          IS_DRAFT: ${{ inputs.draft }}
+        run: |
+          DRAFT=false
+          [ "$IS_DRAFT" = "true" ] && DRAFT=true
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Релиз $TAG уже есть — обновляю заметки и перезаписываю файлы"
+            # --draft=$DRAFT обязателен именно здесь: без него релиз, once созданный
+            # черновиком, останется черновиком навсегда — снаружи его не видно, а прогон
+            # при этом зеленый. Ровно так застрял первый релиз.
+            gh release edit   "$TAG" --title "Библиотека PDF $VER" --notes-file notes.md --draft=$DRAFT
+            gh release upload "$TAG" assets/* --clobber
+          elif [ "$DRAFT" = true ]; then
+            gh release create "$TAG" assets/* --title "Библиотека PDF $VER" --notes-file notes.md --draft
+          else
+            gh release create "$TAG" assets/* --title "Библиотека PDF $VER" --notes-file notes.md
+          fi
+          gh release view "$TAG" --json isDraft,url --jq '"черновик: \(.isDraft)  \(.url)"'
+          {
+            echo "## Библиотека PDF $VER"
+            echo
+            echo "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG"
+          } >> "$GITHUB_STEP_SUMMARY"
