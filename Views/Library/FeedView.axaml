@@ -1,0 +1,327 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:PdfLibrary.Controls"
+             xmlns:vm="using:PdfLibrary.Views.Library"
+             x:Class="PdfLibrary.Views.Library.FeedView"
+             x:DataType="vm:LibraryViewModel">
+
+    <!--
+      Экран «Лента и поиск» (макет, доска 1): боковая панель источников и меток, навбар с
+      порядком и типом документа, блок поиска со строкой состояния, лента карточек и панель
+      действий с выбранными документами.
+    -->
+    <Grid x:Name="Layout" ColumnDefinitions="232,*">
+
+        <!-- ── Боковая панель ──────────────────────────────────────────────── -->
+        <Border x:Name="Sidebar" Grid.Column="0"
+                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineRight}"
+                Background="{DynamicResource BrushBg}">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Height="{StaticResource NavbarHeight}" Padding="10,0"
+                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Button x:Name="AddButton" Theme="{StaticResource NavButton}" ToolTip.Tip="Создать">
+                            <c:Icon Data="{StaticResource IconPlus}" />
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft" FlyoutPresenterClasses="plain">
+                                    <Border Classes="popup" Width="290" Padding="6">
+                                        <StackPanel>
+                                            <Button Theme="{StaticResource MenuButton}" Click="OnNewSource">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <c:Icon Data="{StaticResource IconFolderPlus}" Foreground="{DynamicResource BrushAccent}" VerticalAlignment="Top" Margin="0,1,0,0" />
+                                                    <StackPanel>
+                                                        <TextBlock Text="Источник" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Text="Папка с PDF на диске или в сети" Classes="small muted" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Theme="{StaticResource MenuButton}" Click="OnNewGroup">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <c:Icon Data="{StaticResource IconFolders}" Foreground="{DynamicResource BrushAccent}" VerticalAlignment="Top" Margin="0,1,0,0" />
+                                                    <StackPanel>
+                                                        <TextBlock Text="Группа источников" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Text="Несколько папок под одним названием" Classes="small muted" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Theme="{StaticResource MenuButton}" Click="OnNewTag">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <c:Icon Data="{StaticResource IconTag}" Foreground="{DynamicResource BrushAccent}" VerticalAlignment="Top" Margin="0,1,0,0" />
+                                                    <StackPanel>
+                                                        <TextBlock Text="Метка" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Text="Ярлык для документов: статус, объект" Classes="small muted" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Theme="{StaticResource NavButton}" ToolTip.Tip="{Binding ExpandLabel}"
+                                Click="OnToggleGroups">
+                            <c:Icon Data="{StaticResource IconChevronsUpDown}" />
+                        </Button>
+                        <Button Theme="{StaticResource NavButton}" ToolTip.Tip="Проверить папки на новые файлы"
+                                Click="OnCheckFolders">
+                            <c:Icon Data="{StaticResource IconRefresh}" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="8,4,8,12">
+                        <TextBlock Text="ИСТОЧНИКИ" Classes="section" Margin="10,14,10,4" />
+                        <TextBlock Text="Нажмите «+», чтобы добавить папку с PDF." Classes="small muted"
+                                   Margin="10,2" TextWrapping="Wrap"
+                                   IsVisible="{Binding !SourceRows.Count}" />
+                        <ItemsControl ItemsSource="{Binding SourceRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SourceRow">
+                                    <Border Classes="trow" Height="30" CornerRadius="{StaticResource RadiusSmall}"
+                                            Padding="{Binding Indent, Converter={x:Static vm:Converters.LeftPadding}}"
+                                            Background="Transparent" ContextRequested="OnSourceContext">
+                                        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+                                            <Button Grid.Column="0" Theme="{StaticResource IconButton}"
+                                                    Width="18" Height="18" Margin="0,0,4,0"
+                                                    IsVisible="{Binding IsGroup}" Click="OnFlipGroup"
+                                                    ToolTip.Tip="{Binding ChevronLabel}">
+                                                <c:Icon Data="{StaticResource IconChevronRight}" Width="13" Height="13">
+                                                    <c:Icon.RenderTransform>
+                                                        <RotateTransform Angle="{Binding ChevronAngle}" />
+                                                    </c:Icon.RenderTransform>
+                                                </c:Icon>
+                                            </Button>
+                                            <CheckBox Grid.Column="1" IsChecked="{Binding IsChecked}"
+                                                      Click="OnToggleRow" Padding="0" VerticalAlignment="Center" />
+                                            <c:Icon Grid.Column="2" Data="{StaticResource IconFolders}" Width="15" Height="15"
+                                                    Margin="7,0,0,0" Foreground="{DynamicResource BrushSecondaryText}"
+                                                    IsVisible="{Binding IsGroup}" />
+                                            <TextBlock Grid.Column="3" Text="{Binding Name}" FontSize="12" Margin="7,0,0,0"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       Classes.bold="{Binding IsGroup}"
+                                                       Classes.muted="{Binding Unavailable}" />
+                                            <TextBlock Grid.Column="4" Text="{Binding CountText}" Classes="small muted"
+                                                       Margin="6,0,8,0" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="МЕТКИ" Classes="section" Margin="10,14,10,4" IsVisible="{Binding HasTags}" />
+                        <ItemsControl ItemsSource="{Binding TagRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TagRow">
+                                    <Button Theme="{StaticResource RowButton}" Classes.on="{Binding IsActive}"
+                                            Click="OnPickTag">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Ellipse Width="8" Height="8" Fill="{Binding Color}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="7,0,0,0"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="2" Text="{Binding CountText}" Classes="small muted"
+                                                       VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- ── Основная область ─────────────────────────────────────────────── -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
+
+            <!-- Навбар -->
+            <Border Grid.Row="0" Height="{StaticResource NavbarHeight}" Padding="16,0"
+                    BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Библиотека PDF" Classes="title" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Subtitle}" Classes="small muted" />
+                    </StackPanel>
+
+                    <ComboBox x:Name="SortBox" Grid.Column="1" Width="170" Margin="8,0,0,0"
+                              ToolTip.Tip="Порядок документов" SelectionChanged="OnSortChanged" />
+
+                    <Button x:Name="TypeButton" Grid.Column="2" Width="160" Height="30" Margin="8,0,0,0" Padding="10,0"
+                            Theme="{StaticResource SecondaryButton}" CornerRadius="{StaticResource RadiusSmall}"
+                            HorizontalContentAlignment="Stretch" Classes.on="{Binding TypeFilterActive}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding TypeLabel}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <c:Icon Grid.Column="1" Classes="small" Data="{StaticResource IconChevronDown}"
+                                    Foreground="{DynamicResource BrushSecondaryText}" />
+                        </Grid>
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="plain">
+                                <Border Classes="popup" Width="270" Padding="10">
+                                    <StackPanel Spacing="8">
+                                        <Border Height="30" Padding="8,0" CornerRadius="{StaticResource RadiusSmall}"
+                                                Background="{DynamicResource BrushBg}"
+                                                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="1">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <c:Icon Classes="small" Data="{StaticResource IconSearch}"
+                                                        Foreground="{DynamicResource BrushSecondaryText}" />
+                                                <TextBox Grid.Column="1" Classes="bare" Margin="6,0,0,0"
+                                                         Watermark="Найти тип" Text="{Binding TypeQuery}" />
+                                            </Grid>
+                                        </Border>
+                                        <Border Classes="well">
+                                            <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
+                                                <StackPanel>
+                                                    <CheckBox Height="26" Padding="8,0,0,0" Margin="8,0" FontWeight="SemiBold"
+                                                              Content="(Выделить все)" IsChecked="{Binding AllTypesOn}" />
+                                                    <ItemsControl ItemsSource="{Binding VisibleTypeRows}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:TypeRow">
+                                                                <CheckBox Height="26" Margin="8,0" IsChecked="{Binding IsOn}"
+                                                                          HorizontalAlignment="Stretch" Click="OnTypeClick">
+                                                                    <Grid ColumnDefinitions="*,Auto">
+                                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Grid.Column="1" Text="{Binding CountText}"
+                                                                                   Classes="small muted" Margin="6,0,0,0" />
+                                                                    </Grid>
+                                                                </CheckBox>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </ScrollViewer>
+                                        </Border>
+                                        <Button Theme="{StaticResource PrimaryButton}" Height="28" Content="Готово"
+                                                HorizontalAlignment="Right" Click="OnCloseTypes" />
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Button Grid.Column="3" Theme="{StaticResource NavButton}" Margin="8,0,0,0"
+                            ToolTip.Tip="Открыть панель чтения" Click="OnOpenReader">
+                        <c:Icon Data="{StaticResource IconReaderOpen}" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Блок поиска -->
+            <Border Grid.Row="1" Margin="16,10" CornerRadius="{StaticResource RadiusMedium}" ClipToBounds="True"
+                    BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="1"
+                    Background="{DynamicResource BrushBg}">
+                <StackPanel>
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="10,3,4,3">
+                        <c:Icon Data="{StaticResource IconSearch}" Width="16" Height="16"
+                                Foreground="{DynamicResource BrushSecondaryText}" />
+                        <TextBox x:Name="QueryBox" Grid.Column="1" Classes="bare" Height="30" Margin="8,0"
+                                 FontSize="{DynamicResource FontSizeBase}"
+                                 Watermark="Найти в документах — по названию и по тексту внутри PDF"
+                                 Text="{Binding Query}" KeyDown="OnQueryKey" />
+                        <Button Grid.Column="2" Theme="{StaticResource IconButton}" ToolTip.Tip="Очистить"
+                                IsVisible="{Binding Query, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Click="OnClearSearch" Margin="0,0,8,0">
+                            <c:Icon Classes="small" Data="{StaticResource IconClose}" />
+                        </Button>
+                        <Button Grid.Column="3" Theme="{StaticResource PrimaryButton}" Height="26" Padding="14,0"
+                                Content="Найти" Click="OnFind" />
+                    </Grid>
+                    <Border Background="{DynamicResource BrushSecondaryBg}" Padding="10,4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding StatusText}" Classes="small muted" TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Theme="{StaticResource LinkButton}" FontSize="{DynamicResource FontSizeSmall}"
+                                    Margin="12,0,0,0" Content="{Binding StatusAction}" Click="OnStatusAction"
+                                    IsVisible="{Binding StatusAction, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        </Grid>
+                    </Border>
+                    <ProgressBar Height="3" MinHeight="3" Minimum="0" Maximum="1" Value="{Binding ReadFraction}"
+                                 IsVisible="{Binding ReadingNow}" CornerRadius="0"
+                                 Foreground="{DynamicResource BrushAccent}" Background="{DynamicResource BrushSeparator}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Лента карточек -->
+            <Panel Grid.Row="2">
+                <TextBlock Text="{Binding EmptyText}" Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
+                           Margin="32,48" HorizontalAlignment="Center" IsVisible="{Binding IsEmpty}" />
+                <ScrollViewer x:Name="FeedScroll" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="FeedList" ItemsSource="{Binding Cards}" Margin="16,0,16,72"
+                                  ContainerPrepared="OnCardPrepared">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CardViewModel">
+                                <vm:CardView />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Действия с выбранными -->
+                <Border Classes="popup" IsVisible="{Binding HasSelection}" CornerRadius="{StaticResource RadiusLarge}"
+                        Background="{DynamicResource BrushBg}"
+                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16" Padding="14,6,6,6">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{Binding SelectedText}" FontWeight="SemiBold" FontSize="12"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <Button x:Name="TagMenuButton" Theme="{StaticResource BarButton}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <c:Icon Classes="small" Data="{StaticResource IconTag}" />
+                                <TextBlock Text="Метка" VerticalAlignment="Center" />
+                                <c:Icon Width="12" Height="12" Data="{StaticResource IconChevronUp}"
+                                        Foreground="{DynamicResource BrushSecondaryText}" />
+                            </StackPanel>
+                            <Button.Flyout>
+                                <Flyout Placement="TopEdgeAlignedLeft" FlyoutPresenterClasses="plain" Opening="OnTagMenuOpening">
+                                    <Border Classes="popup" Width="270" Padding="10">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock x:Name="TagMenuTitle" Classes="small muted" TextWrapping="Wrap" Margin="4,0" />
+                                            <Border Classes="well">
+                                                <ScrollViewer MaxHeight="260" HorizontalScrollBarVisibility="Disabled">
+                                                    <ItemsControl x:Name="TagPickList">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:TagPick">
+                                                                <CheckBox Height="28" Margin="8,0" IsChecked="{Binding IsOn}"
+                                                                          HorizontalAlignment="Stretch" Click="OnTagPickClick">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                                                        <Ellipse Width="8" Height="8" Fill="{Binding Color}" VerticalAlignment="Center" />
+                                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                                    </StackPanel>
+                                                                </CheckBox>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                            </Border>
+                                            <TextBlock x:Name="NoTagsText" Text="Меток пока нет." Classes="small muted" Margin="4,0" />
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Button Theme="{StaticResource LinkButton}" Content="+ Новая метка"
+                                                        FontSize="12" Click="OnNewTagFromMenu" />
+                                                <Button Grid.Column="1" Theme="{StaticResource PrimaryButton}" Height="28"
+                                                        Content="Готово" Click="OnCloseTags" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Theme="{StaticResource BarButton}" Click="OnCopySelected">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <c:Icon Classes="small" Data="{StaticResource IconDownload}" />
+                                <TextBlock Text="Копировать в папку" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Rectangle Width="1" Height="20" Fill="{DynamicResource BrushSeparator}" Margin="4,0" />
+                        <Button Theme="{StaticResource BarButton}" Width="28" Padding="0" ToolTip.Tip="Снять выделение"
+                                Click="OnClearSelection">
+                            <c:Icon Classes="small" Data="{StaticResource IconClose}" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Panel>
+        </Grid>
+    </Grid>
+</UserControl>

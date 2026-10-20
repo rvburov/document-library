@@ -1,0 +1,270 @@
+using System.Diagnostics;
+using Avalonia;
+using Serilog;
+using PdfLibrary.Logging;
+using PdfLibrary.Setup;
+using PdfLibrary.Utils;
+
+namespace PdfLibrary;
+
+internal sealed class Program
+{
+    // Режим запуска (вариант A): приложение / установщик / удаление. App читает это в
+    // OnFrameworkInitializationCompleted и открывает нужное окно. Подробности —
+    // docs/developer/guides/install-and-update.md.
+    internal static SetupMode Mode { get; private set; } = SetupMode.App;
+
+    // Самозамена при обновлении не удалась (файл был занят) — апдейтер перезапустил нас с этим
+    // флагом. App покажет разовое уведомление, что версия осталась прежней.
+    /// <summary>Перезапуск после неудавшейся самозамены: причина из аргумента
+    /// <c>--update-failed &lt;причина&gt;</c> (см. <see cref="InstallService.UpdateFailedMessage"/>);
+    /// null — обычный запуск.</summary>
+    internal static string? UpdateFailedReason { get; private set; }
+
+    // Единственный экземпляр на локальную папку данных: фоновый режим не должен поднять второй
+    // процесс (двойные уведомления). В режимах установщика/удаления не используется.
+    internal static SingleInstance? Instance { get; private set; }
+
+    // Момент запуска и причина выхода — для записи о штатном завершении (App, desktop.Exit):
+    // по ней видно, сколько программа работала и как закрылась; ее отсутствие после записи
+    // «Запуск программы» выдает убитый процесс или выключение питания.
+    internal static readonly DateTime StartedAt = DateTime.Now;
+    internal static string? ExitReason { get; set; }
+
+    [STAThread]
+    public static void Main(string[] args)
+    {
+        // Интерфейс только русский: числа и даты — по-русски («3,1 МБ», «20.10.2026»), что бы ни
+        // стояло в языке системы.
+        var ru = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = ru;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = ru;
+        System.Globalization.CultureInfo.CurrentCulture = ru;
+        System.Globalization.CultureInfo.CurrentUICulture = ru;
+
+        // Глобальные предохранители: НЕобработанные исключения пишутся в crash.log рядом с
+        // данными приложения (иначе у конечного пользователя вылет бесследный, диагностировать
+        // нечего). Основная защита — точечные catch в UI (Utils/DbErrors и др.), это последний рубеж.
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            LogCrash("unhandled", e.ExceptionObject as Exception);
+            // Процесс сейчас завершится, и finally в Main может не выполниться (падение с
+            // фонового потока). Форсируем сброс буфера Serilog в logs.db, чтобы фатальная
+            // запись не потерялась. crash.log уже записан синхронно внутри LogCrash.
+            AppLog.Shutdown();
+        };
+        // Упавшие fire-and-forget задачи (паттерн `_ = Task.Run(...)`): фиксируем в лог и
+        // помечаем наблюденными — иначе финализатор может завершить процесс.
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            LogCrash("unobserved-task", e.Exception);
+            e.SetObserved();
+        };
+
+        // Режим самозамены: новый .exe (из %TEMP%) запущен с --apply-update, чтобы
+        // дождаться выхода старого приложения, заменить его собой и перезапустить.
+        if (args.Length > 0 && args[0] == "--apply-update")
+        {
+            ApplyUpdate(args);
+            return;
+        }
+
+        // Перезапуск после НЕудавшейся самозамены — App-режим, но с уведомлением пользователю.
+        // Причина — следующим аргументом (старый апдейтер мог передать флаг без нее).
+        var failedAt = Array.IndexOf(args, "--update-failed");
+        if (failedAt >= 0)
+            UpdateFailedReason = failedAt + 1 < args.Length && !args[failedAt + 1].StartsWith("--")
+                ? args[failedAt + 1]
+                : "unknown";
+
+        Mode = ResolveMode(args);
+        if (Mode == SetupMode.App)
+        {
+            AppSettings.EnsureCreated();
+
+            // Один экземпляр на папку данных: второй запуск просит работающий показать окно и
+            // выходит (иначе фоновый режим поднял бы второй процесс — двойные уведомления).
+            Instance = SingleInstance.TryAcquire(AppSettings.AppDataDir);
+            if (Instance is null)
+            {
+                SingleInstance.SignalShow(AppSettings.AppDataDir);
+                return;
+            }
+
+            // Диагностический лог в logs.db. Только App-режим: установщику/удалению он не нужен.
+            AppLog.Init();
+            // Точка отсчета сессии: в logs.db всегда есть версия и старт, даже без ошибок.
+            // :l — литеральный вывод строк без кавычек (иначе Serilog пишет v"1.0.3").
+            Log.Information("Запуск программы, версия {Version:l} ({OS:l})",
+                AppSettings.AppVersion, System.Runtime.InteropServices.RuntimeInformation.OSDescription);
+        }
+        try
+        {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            // В Avalonia 11 нет публичного dispatcher-хука: исключение из UI-обработчика
+            // валит цикл и приходит сюда. Восстановить сеанс нельзя — но причина останется
+            // в crash.log для диагностики.
+            LogCrash("ui-loop", ex);
+            throw;
+        }
+        finally
+        {
+            // Дописать буфер приемника при любом выходе (штатном или по исключению).
+            // Если Init не вызывали (установщик) — no-op на «тихом» логгере по умолчанию.
+            AppLog.Shutdown();
+        }
+    }
+
+    // Дозапись в crash.log (best-effort: сбой логирования не должен маскировать исходную ошибку).
+    // Дублируем в Serilog (logs.db) — но crash.log остается независимым резервом: он работает,
+    // даже если Serilog еще не инициализирован (сбой на старте) или его приемник недоступен.
+    internal static void LogCrash(string source, Exception? ex)
+    {
+        // На «тихом» логгере по умолчанию (до AppLog.Init) — безопасный no-op.
+        try { Log.Fatal(ex, "Crash: {Source:l} v{Version:l}", source, AppSettings.AppVersion); }
+        catch { }
+
+        CrashLog.Append(source, ex?.ToString() ?? "(исключения нет)");
+    }
+
+    // Режим установщика включается аргументом (--install/--uninstall) или именем раздачи
+    // «…-Setup»: на Windows/Linux — имя файла бинаря, на macOS — имя `.app`-бандла
+    // (PdfLibrary-Setup.app, внутренний бинарь остается PdfLibrary). Иначе → приложение.
+    private static SetupMode ResolveMode(string[] args)
+    {
+        if (Array.Exists(args, a => a == "--uninstall")) return SetupMode.Uninstall;
+        if (Array.Exists(args, a => a == "--install"))   return SetupMode.Install;
+
+        string name;
+        if (OperatingSystem.IsMacOS() && InstallService.BundleRoot(Environment.ProcessPath) is { } bundle)
+            name = Path.GetFileNameWithoutExtension(bundle);   // PdfLibrary-Setup(.app)
+        else
+            name = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "";
+
+        return name.EndsWith("-Setup", StringComparison.OrdinalIgnoreCase) ? SetupMode.Install : SetupMode.App;
+    }
+
+    // Менеджер библиотеки DesktopNotifications для Windows/Linux (баннеры с иконкой приложения
+    // и колбэком клика). На macOS библиотека уведомлений не работает (ее бэкенд — заглушка), там
+    // уведомления идут через osascript (Notifications/Notifier). Создается один раз на процесс.
+    internal static DesktopNotifications.INotificationManager? NotificationManager { get; private set; }
+
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        NotificationManager = CreateNotificationManager();
+        return AppBuilder.Configure<App>()
+                         .UsePlatformDetect()
+                         .WithInterFont()
+                         .LogToTrace();
+    }
+
+    // Платформенный менеджер: Windows — WinRT-тосты (нужен ярлык/AUMID, создается контекстом),
+    // Linux — freedesktop D-Bus. macOS/прочее — null (Notifications/Notifier идет своим путем).
+    //
+    // Сбой здесь стоит дорого: приложение стартует как ни в чем не бывало, значок-счетчик
+    // растет, а баннеров нет — и понять это снаружи нечем. Поэтому и удача, и провал попадают
+    // в logs.db (AppLog.Init уже отработал выше, в App-режиме). Ровно так в SmartBase пряталась
+    // поломка Windows-тостов: под таргетом без WinRT менеджер падал с TypeLoadException, а catch молчал.
+    private static DesktopNotifications.INotificationManager? CreateNotificationManager()
+    {
+        try
+        {
+            DesktopNotifications.INotificationManager? m = null;
+            if (OperatingSystem.IsWindows())
+                m = new DesktopNotifications.Windows.WindowsNotificationManager(
+                        DesktopNotifications.Windows.WindowsApplicationContext.FromCurrentProcess());
+            else if (OperatingSystem.IsLinux())
+            {
+                // Без сеансовой шины D-Bus (сервер без рабочего стола, виртуальный экран) показывать
+                // баннеры некуда. Менеджер в таком сеансе падает не только здесь: соединение
+                // библиотеки бросает еще и незамеченную ошибку в фоне, и она ложится в crash.log.
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS")))
+                {
+                    Log.Information("Сеансовой шины D-Bus нет — системные уведомления выключены");
+                    return null;
+                }
+                m = new DesktopNotifications.FreeDesktop.FreeDesktopNotificationManager(
+                        DesktopNotifications.FreeDesktop.FreeDesktopApplicationContext.FromCurrentProcess());
+            }
+            m?.Initialize().GetAwaiter().GetResult();
+            if (m is not null)
+                Log.Information("Менеджер нативных уведомлений создан: {Backend:l}", m.GetType().Name);
+            return m;
+        }
+        catch (Exception ex)
+        {
+            // Нет D-Bus / WinRT / ярлыка — уведомления Windows/Linux показываться не будут
+            // (фабрика вернет no-op). Приложение стартует как обычно, но след остается.
+            Log.Warning(ex, "Не удалось создать менеджер нативных уведомлений — баннеры ОС показываться не будут");
+            return null;
+        }
+    }
+
+    // Ждет выхода старого процесса (--pid), копирует себя поверх --target и запускает
+    // обновленное приложение заново. Запущенный .exe нельзя перезаписать собой, поэтому
+    // замену делает новый файл, пока старый закрыт.
+    private static void ApplyUpdate(string[] args)
+    {
+        string? target = null;
+        var pid = -1;
+        for (var i = 1; i + 1 < args.Length; i++)
+        {
+            if      (args[i] == "--target") target = args[i + 1];
+            else if (args[i] == "--pid")    int.TryParse(args[i + 1], out pid);
+        }
+        if (string.IsNullOrEmpty(target)) return;
+
+        // Дождаться закрытия старого приложения — иначе файл занят. Штатный выход укладывается в
+        // секунды, но процесс, у которого операция к зависшей сетевой папке стоит в ядре, не
+        // завершится вообще — ждать его дольше минуты бессмысленно, зато причину надо назвать:
+        // иначе человек видит «файл занят другим процессом» и не понимает, каким.
+        var oldAlive = false;
+        if (pid > 0)
+        {
+            try { oldAlive = !Process.GetProcessById(pid).WaitForExit(60_000); }
+            catch { /* процесс уже завершился */ }
+        }
+
+        var self = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(self)) return;
+
+        // Источник замены: на macOS — корень нашего .app-бандла (целую папку), иначе — сам файл.
+        var src = OperatingSystem.IsMacOS() ? (InstallService.BundleRoot(self) ?? self) : self;
+
+        // Замена с повторами внутри ReplaceArtifact: на Windows блокировки могут держать файл
+        // пару секунд; на macOS заменяется весь .app-бандл (publish под mac не single-file).
+        // Если так и не удалось — перезапустим старую версию с --update-failed <причина>, чтобы
+        // приложение сообщило: обновление не применилось, версия прежняя, и что с этим делать.
+        var replaced = !oldAlive && InstallService.ReplaceArtifact(src, target);
+        var flag     = replaced  ? ""
+                     : oldAlive  ? "--update-failed " + InstallService.UpdateFailedOldProcess
+                                 : "--update-failed " + InstallService.UpdateFailedFileLocked;
+
+        // Заменен только бинарь, а все, что установщик создал вокруг него, осталось от прежней
+        // сборки: ярлыки, установщик рядом, запись в списке приложений. Из-за этого оболочка
+        // продолжала показывать старую иконку — ярлык не менялся, и перечитывать значок ей было
+        // незачем. Приводим окружение в соответствие ДО запуска: если запустить сначала, человек
+        // увидит новую программу под старой иконкой хотя бы мгновение.
+        if (replaced) InstallService.RefreshAfterUpdate(target, src);
+
+        // Запустить обновленное приложение.
+        try
+        {
+            if (OperatingSystem.IsMacOS())
+                // target — это .app-бандл; правильный запуск GUI-приложения на macOS — через open.
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "open",
+                    Arguments = flag.Length > 0 ? $"\"{target}\" --args {flag}" : $"\"{target}\"",
+                    UseShellExecute = false,
+                });
+            else
+                // На Linux запускаем бинарь напрямую (UseShellExecute=true ушел бы в xdg-open).
+                Process.Start(new ProcessStartInfo { FileName = target, Arguments = flag, UseShellExecute = OperatingSystem.IsWindows() });
+        }
+        catch { /* не удалось перезапустить — пользователь откроет вручную */ }
+    }
+}

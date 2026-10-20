@@ -1,0 +1,30 @@
+<d:DialogBase xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:d="using:PdfLibrary.Views.Dialogs"
+              x:Class="PdfLibrary.Views.Dialogs.NewGroupDialog">
+
+    <!-- Макет: «Кнопка «+»: меню и окна» → «Группа источников». -->
+    <StackPanel>
+        <TextBlock Text="Группа собирает несколько источников под одним названием в боковой панели. Папки на диске не меняются."
+                   Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+        <TextBlock Text="Название группы" FontSize="12" Margin="0,14,0,6" />
+        <TextBox x:Name="NameBox" Watermark="Например, Объект №1" TextChanged="OnNameChanged" />
+
+        <TextBlock Text="Источники в группе" FontSize="12" Margin="0,14,0,6" />
+        <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMedium}" Padding="4">
+            <ScrollViewer MaxHeight="260" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="SourceList" />
+            </ScrollViewer>
+        </Border>
+        <TextBlock x:Name="NoSources" Text="Источников пока нет — группу можно создать и наполнить потом."
+                   Classes="small muted" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="False" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,20,0,0">
+            <Button Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
+            <Button x:Name="CreateButton" Theme="{StaticResource PrimaryButton}" Content="Создать"
+                    Click="OnCreate" IsEnabled="False" />
+        </StackPanel>
+    </StackPanel>
+</d:DialogBase>

@@ -1,0 +1,186 @@
+using PdfLibrary.Utils;
+
+namespace PdfLibrary.Tests.Unit;
+
+/// <summary>
+/// Автозапуск и фоновый режим: чистое построение записи автозапуска (plist/desktop/reg —
+/// без записи на диск), логика «скрывать окно при закрытии» и дельты настроек. Побочные
+/// эффекты (реальная запись файла/реестра) и жизненный цикл окна здесь не проверяются.
+/// </summary>
+public sealed class AutostartTests
+{
+    private sealed class FakeStore : ISettingsStore
+    {
+        private readonly Dictionary<string, string> _d = new();
+        public bool Has(string key) => _d.ContainsKey(key);
+        public string? Get(string key) => _d.TryGetValue(key, out var v) ? v : null;
+        public void Set(string key, string value) => _d[key] = value;
+        public void Remove(string key) => _d.Remove(key);
+    }
+
+    // ── Построение записи (чистое) ─────────────────────────────────────────────
+
+    // Запись автозапуска не несет аргументов: при входе в систему окно открывается всегда,
+    // независимо от фонового режима. Раньше сюда дописывался --background, и приложение
+    // стартовало скрытым — со стороны это выглядело как «автозапуск не сработал».
+
+    [Fact]
+    public void Windows_command_is_quoted_exe_without_arguments()
+    {
+        Assert.Equal("\"C:\\App\\PdfLibrary.exe\"",
+            Autostart.BuildWindowsCommand("C:\\App\\PdfLibrary.exe"));
+        Assert.DoesNotContain("--background", Autostart.BuildWindowsCommand("C:\\App\\PdfLibrary.exe"));
+    }
+
+    [Fact]
+    public void Mac_plist_has_runatload_and_program_without_arguments()
+    {
+        var plist = Autostart.BuildMacPlist("/Apps/PdfLibrary.app/Contents/MacOS/PdfLibrary");
+        Assert.Contains("<key>RunAtLoad</key>", plist);
+        Assert.Contains("com.romanburov.pdflibrary", plist);
+        Assert.Contains("/Apps/PdfLibrary.app/Contents/MacOS/PdfLibrary", plist);
+        Assert.DoesNotContain("--background", plist);
+    }
+
+    [Fact]
+    public void Linux_desktop_entry_is_autostart_enabled_with_exec()
+    {
+        var d = Autostart.BuildLinuxDesktop("/opt/pdflibrary/PdfLibrary");
+        Assert.Contains("[Desktop Entry]", d);
+        Assert.Contains("X-GNOME-Autostart-enabled=true", d);
+        Assert.Contains("/opt/pdflibrary/PdfLibrary", d);
+        Assert.DoesNotContain("--background", d);
+    }
+
+    // ── Разбор записи (чистое) ─────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("\"C:\\App\\PdfLibrary.exe\"",                "C:\\App\\PdfLibrary.exe")]
+    [InlineData("\"C:\\App\\PdfLibrary.exe\" --background",   "C:\\App\\PdfLibrary.exe")]   // запись до 1.0.5
+    [InlineData("\"C:\\Program Files\\Smart Base\\App.exe\"", "C:\\Program Files\\Smart Base\\App.exe")]
+    [InlineData("C:\\App\\PdfLibrary.exe",                    "C:\\App\\PdfLibrary.exe")]   // без кавычек
+    [InlineData("",     null)]
+    [InlineData("   ",  null)]
+    [InlineData("\"",   null)]
+    public void Windows_target_is_parsed_back_from_command(string command, string? expected) =>
+        Assert.Equal(expected, Autostart.ParseWindowsTarget(command));
+
+    [Fact]
+    public void Mac_and_linux_targets_are_parsed_back_from_record()
+    {
+        const string bin = "/Apps/PdfLibrary.app/Contents/MacOS/PdfLibrary";
+        Assert.Equal(bin, Autostart.ParseMacTarget(Autostart.BuildMacPlist(bin)));
+        Assert.Null(Autostart.ParseMacTarget("<plist><dict></dict></plist>"));
+
+        const string exec = "/opt/pdflibrary/PdfLibrary";
+        Assert.Equal(exec, Autostart.ParseLinuxDesktopTarget(Autostart.BuildLinuxDesktop(exec)));
+        // Запись с аргументом (так ее писали ранние сборки SmartBase) — путь все равно вычитывается.
+        Assert.Equal(exec, Autostart.ParseLinuxDesktopTarget($"[Desktop Entry]\nExec=\"{exec}\" --background\n"));
+        Assert.Null(Autostart.ParseLinuxDesktopTarget("[Desktop Entry]\nName=PdfLibrary\n"));
+    }
+
+    [Fact]
+    public void Windows_command_round_trips_through_parse()
+    {
+        const string exe = "C:\\Users\\Иван\\AppData\\Local\\Programs\\PdfLibrary\\PdfLibrary.exe";
+        Assert.Equal(exe, Autostart.ParseWindowsTarget(Autostart.BuildWindowsCommand(exe)));
+    }
+
+    // ── Решение о синхронизации записи с настройкой (чистое) ───────────────────
+
+    private const string Cur = "C:\\App\\PdfLibrary.exe";
+    private static string Expected => Autostart.BuildWindowsCommand(Cur);
+
+    [Fact]
+    public void Sync_restores_missing_record_when_enabled() =>
+        Assert.Equal(Autostart.SyncAction.Write,
+            Autostart.DecideSync(true, null, null, false, Cur, Expected));
+
+    [Fact]
+    public void Sync_rewrites_record_pointing_at_deleted_binary()
+    {
+        var old = "C:\\Old\\PdfLibrary.exe";
+        Assert.Equal(Autostart.SyncAction.Write,
+            Autostart.DecideSync(true, $"\"{old}\"", old, recordedTargetExists: false, Cur, Expected));
+    }
+
+    [Fact]
+    public void Sync_rewrites_stale_arguments_of_our_own_record() =>
+        Assert.Equal(Autostart.SyncAction.Write,
+            Autostart.DecideSync(true, $"\"{Cur}\" --background", Cur, true, Cur, Expected));
+
+    [Fact]
+    public void Sync_leaves_matching_record_alone() =>
+        Assert.Equal(Autostart.SyncAction.None,
+            Autostart.DecideSync(true, Expected, Cur, true, Cur, Expected));
+
+    [Fact]
+    public void Sync_does_not_hijack_another_living_copy()
+    {
+        var other = "D:\\Portable\\PdfLibrary.exe";
+        Assert.Equal(Autostart.SyncAction.None,
+            Autostart.DecideSync(true, $"\"{other}\"", other, recordedTargetExists: true, Cur, Expected));
+    }
+
+    [Fact]
+    public void Sync_removes_only_our_record_when_disabled()
+    {
+        Assert.Equal(Autostart.SyncAction.Remove,
+            Autostart.DecideSync(false, Expected, Cur, true, Cur, Expected));
+
+        var other = "D:\\Portable\\PdfLibrary.exe";
+        Assert.Equal(Autostart.SyncAction.None,
+            Autostart.DecideSync(false, $"\"{other}\"", other, true, Cur, Expected));
+        Assert.Equal(Autostart.SyncAction.None,
+            Autostart.DecideSync(false, null, null, false, Cur, Expected));
+    }
+
+    // ── Поведение окна в фоне (чистое) ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData(true,  false, true,  true)]   // фон вкл, не явный выход, значок есть → скрыть
+    [InlineData(true,  true,  true,  false)]  // фон вкл, явный выход                 → закрыть
+    [InlineData(false, false, true,  false)]  // фон выкл                             → закрыть
+    [InlineData(true,  false, false, false)]  // значка нет — прятать некуда          → закрыть
+    public void ShouldHideOnClose(bool background, bool explicitQuit, bool canReturn, bool expected) =>
+        Assert.Equal(expected, BackgroundBehavior.ShouldHideOnClose(background, explicitQuit, canReturn));
+
+    // ── Отметка «выключено» из Диспетчера задач (чистое) ───────────────────────
+
+    [Theory]
+    [InlineData(null,  false)]   // значения нет — запись не отключали
+    [InlineData(new byte[0],     false)]
+    [InlineData(new byte[] { 0x02, 0, 0, 0 }, false)]   // включена
+    [InlineData(new byte[] { 0x06, 0, 0, 0 }, false)]   // включена (другой вариант)
+    [InlineData(new byte[] { 0x03, 0, 0, 0 }, true)]    // выключена пользователем
+    [InlineData(new byte[] { 0x07, 0, 0, 0 }, true)]
+    [InlineData(new byte[] { 0x01, 0, 0, 0 }, true)]    // встречается на живых машинах
+    public void StartupApproved_flag_is_read_by_low_bit(byte[]? data, bool expected) =>
+        Assert.Equal(expected, Autostart.IsDisabledFlag(data));
+
+    // ── Дельты настроек ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Autostart_and_background_default_off_and_round_trip_as_deltas()
+    {
+        var store = new FakeStore();
+        AppSettings.AttachStore(store);
+
+        Assert.False(AppSettings.Autostart);
+        Assert.False(AppSettings.Background);
+
+        AppSettings.Autostart = true;
+        AppSettings.Background = true;
+        Assert.True(store.Has(AppSettings.KeyAutostart));
+        Assert.True(store.Has(AppSettings.KeyBackground));
+        Assert.True(AppSettings.Autostart);
+        Assert.True(AppSettings.Background);
+
+        // Назад к стандарту (false) — ключи удаляются (в базе лежат только отличия).
+        AppSettings.Autostart = false;
+        AppSettings.Background = false;
+        Assert.False(store.Has(AppSettings.KeyAutostart));
+        Assert.False(store.Has(AppSettings.KeyBackground));
+        AppSettings.AttachStore(null);
+    }
+}

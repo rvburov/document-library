@@ -1,0 +1,26 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!--
+      Шрифт и размеры — токены макета. Размеры переписывает Utils/FontScale (настройка «Размер
+      шрифта»), поэтому потребители берут их через DynamicResource.
+    -->
+    <FontFamily x:Key="FontFamilyBase">fonts:Inter#Inter, $Default</FontFamily>
+
+    <!-- Подписи и мелкий текст: строка пути, мета, чипы, заголовки секций -->
+    <sys:Double x:Key="FontSizeSmall">11</sys:Double>
+    <!-- Основной текст -->
+    <sys:Double x:Key="FontSizeBase">13</sys:Double>
+    <!-- Заголовок диалога -->
+    <sys:Double x:Key="FontSizeMedium">16</sys:Double>
+    <!-- Заголовок панели чтения -->
+    <sys:Double x:Key="FontSizeLargeReader">18</sys:Double>
+    <!-- Заголовок навбара и экрана настроек -->
+    <sys:Double x:Key="FontSizeLarge">20</sys:Double>
+    <!-- Заголовок экрана первого запуска -->
+    <sys:Double x:Key="FontSizeHero">28</sys:Double>
+
+    <FontWeight x:Key="FontWeightBold">SemiBold</FontWeight>
+
+</ResourceDictionary>

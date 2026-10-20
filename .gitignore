@@ -1,0 +1,82 @@
+# ===== C# / .NET =====
+bin/
+obj/
+# Все артефакты сборки (bin/obj/publish) собраны сюда — см. Directory.Build.props
+artifacts/
+# Готовые сборки для раздачи: dist/Version <X.Y.Z>/<rid>/ (Windows/Linux) и dist/Version <X.Y.Z>/<rid>/PdfLibrary.app (macOS)
+dist/
+# Локальный кэш NuGet-пакетов внутри проекта (см. nuget.config) — аналог venv
+packages/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.nupkg
+*.snupkg
+# Результаты publish и self-contained сборки
+[Pp]ublish/
+*.[Pp]ublish.xml
+# Прочие артефакты сборки/тестов
+[Dd]ebug/
+[Rr]elease/
+TestResults/
+*.coverage
+*.VisualState.xml
+project.lock.json
+project.assets.json
+
+# ===== AVALONIA =====
+*.axaml.g.cs
+*.g.i.cs
+
+# ===== RIDER / JETBRAINS =====
+.idea/
+
+# ===== VISUAL STUDIO =====
+.vscode/
+*.rsuser
+*.MigrateUser
+
+# ===== БАЗЫ ДАННЫХ =====
+*.sqlite
+*.sqlite3
+*.db
+# Временные файлы SQLite (journal / write-ahead log / shared-memory)
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# ===== ЛОКАЛЬНЫЕ ДАННЫЕ (DEV) =====
+# Папка данных при разработке (Debug): library.db, кеши и журнал.
+/.localdata/
+
+# ===== КОНФИГУРАЦИЯ =====
+settings.ini
+appsettings.Local.json
+
+# ===== СИСТЕМНЫЕ ФАЙЛЫ =====
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+*.temp
+*.bak
+*~
+
+# ===== ЛОГИ =====
+logs/
+*.log
+
+# ===== Тестовые базы (не коммитить) =====
+# Тестовые PDF собираются в самих тестах.
+Tests/*.db
+
+# Рабочие папки агентов (git worktree, см. AGENTS.md): Claude Code — .claude/worktrees,
+# остальные ИИ — .agents/worktrees (Scripts/worktree.sh). В репозиторий они попасть не должны.
+.claude/worktrees/
+.agents/worktrees/

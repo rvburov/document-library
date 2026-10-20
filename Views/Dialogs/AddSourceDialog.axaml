@@ -1,0 +1,42 @@
+<d:DialogBase xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:d="using:PdfLibrary.Views.Dialogs"
+              x:Class="PdfLibrary.Views.Dialogs.AddSourceDialog">
+
+    <!-- Макет: «Кнопка «+»: меню и окна» → «Источник». -->
+    <StackPanel>
+        <TextBlock Text="Папка с PDF на диске или в сети. Подпапки тоже войдут, файлы останутся на своих местах."
+                   Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+        <TextBlock Text="Папка" FontSize="12" Margin="0,14,0,6" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox x:Name="PathBox" Watermark="Вставьте путь, например \\srv-01\archive"
+                     TextChanged="OnPathChanged" />
+            <Button Grid.Column="1" Theme="{StaticResource SecondaryButton}" Margin="8,0,0,0"
+                    CornerRadius="{StaticResource RadiusSmall}" Content="Обзор…" Click="OnBrowse" />
+        </Grid>
+
+        <TextBlock Text="Название" FontSize="12" Margin="0,14,0,6" />
+        <TextBox x:Name="NameBox" Watermark="Возьмется из имени папки" />
+
+        <StackPanel x:Name="GroupBlock">
+            <TextBlock Text="Группа" FontSize="12" Margin="0,14,0,6" />
+            <ItemsControl x:Name="GroupPills">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+
+        <TextBlock x:Name="ErrorText" Foreground="{DynamicResource BrushRed}" FontSize="12"
+                   TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="False" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,20,0,0">
+            <Button Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
+            <Button x:Name="AddButton" Theme="{StaticResource PrimaryButton}" Content="Добавить"
+                    Click="OnAdd" IsEnabled="False" />
+        </StackPanel>
+    </StackPanel>
+</d:DialogBase>

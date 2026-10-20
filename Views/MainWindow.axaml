@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:PdfLibrary.Controls"
+        xmlns:lib="using:PdfLibrary.Views.Library"
+        xmlns:reader="using:PdfLibrary.Views.Reader"
+        xmlns:settings="using:PdfLibrary.Views.Settings"
+        xmlns:welcome="using:PdfLibrary.Views.Welcome"
+        xmlns:dialogs="using:PdfLibrary.Views.Dialogs"
+        x:Class="PdfLibrary.Views.MainWindow"
+        Title="Библиотека PDF"
+        Width="1331" Height="813" MinWidth="960" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        DragDrop.AllowDrop="True">
+
+    <!--
+      Главное окно: панель разделов слева (48 px) и экран справа — лента, панель чтения,
+      настройки или первый запуск. Поверх — слой диалогов и строка уведомлений.
+      Весь интерфейс масштабируется настройкой «Масштаб интерфейса» (LayoutTransformControl).
+    -->
+    <LayoutTransformControl x:Name="ZoomRoot">
+        <Panel>
+            <Grid ColumnDefinitions="48,*">
+
+                <!-- ── Панель разделов ───────────────────────────────────────── -->
+                <Border Grid.Column="0" Background="{DynamicResource BrushSecondaryBg}"
+                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineRight}">
+                    <DockPanel Margin="0,12">
+                        <StackPanel DockPanel.Dock="Top" Spacing="8" HorizontalAlignment="Center">
+                            <Button x:Name="SidebarButton" Theme="{StaticResource ActivityButton}"
+                                    ToolTip.Tip="Скрыть боковую панель" Click="OnToggleSidebar">
+                                <c:Icon x:Name="SidebarIcon" Classes="large" Data="{StaticResource IconSidebarClose}" />
+                            </Button>
+                            <Rectangle Width="24" Height="1" Fill="{DynamicResource BrushSeparator}" Margin="0,4" />
+                            <Button x:Name="LibraryButton" Theme="{StaticResource ActivityButton}" Classes="on"
+                                    ToolTip.Tip="Библиотека" Click="OnLibrary">
+                                <c:Icon Classes="large" Data="{StaticResource IconLibrary}" />
+                            </Button>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Bottom" Spacing="8" HorizontalAlignment="Center">
+                            <Button x:Name="ReadingButton" Theme="{StaticResource ActivityButton}" IsVisible="False"
+                                    Click="OnReadingClick">
+                                <c:ProgressRing x:Name="ReadingRing" Width="22" Height="22"
+                                                Track="{DynamicResource BrushLineStrong}" Arc="{DynamicResource BrushAccent}" />
+                            </Button>
+                            <Button x:Name="SettingsButton" Theme="{StaticResource ActivityButton}"
+                                    ToolTip.Tip="Настройки" Click="OnSettings">
+                                <c:Icon Classes="large" Data="{StaticResource IconSettings}" />
+                            </Button>
+                        </StackPanel>
+                        <Panel />
+                    </DockPanel>
+                </Border>
+
+                <!-- ── Экраны ─────────────────────────────────────────────────── -->
+                <Panel Grid.Column="1">
+                    <lib:FeedView x:Name="Feed" />
+                    <reader:ReaderScreen x:Name="Reader" IsVisible="False" />
+                    <settings:SettingsView x:Name="Settings" IsVisible="False" />
+                    <welcome:WelcomeView x:Name="Welcome" IsVisible="False" />
+                </Panel>
+            </Grid>
+
+            <!-- Уведомление внизу справа: «Скопировано…», ошибки открытия файла. -->
+            <Border x:Name="NoticeBar" IsVisible="False" Classes="popup"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,16"
+                    MaxWidth="460" Padding="14,10" Background="{DynamicResource BrushBg}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="NoticeText" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Theme="{StaticResource IconButton}" Margin="10,0,0,0"
+                            ToolTip.Tip="Закрыть" Click="OnCloseNotice">
+                        <c:Icon Classes="small" Data="{StaticResource IconClose}" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <dialogs:DialogHost x:Name="DialogLayer" />
+        </Panel>
+    </LayoutTransformControl>
+</Window>

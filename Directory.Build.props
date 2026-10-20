@@ -1,0 +1,29 @@
+<Project>
+
+  <!--
+    Artifacts Output Layout (официальная фича .NET 8+).
+    Все результаты сборки (bin/, obj/, publish/) собираются в одну папку
+    artifacts/ в корне проекта вместо разбросанных bin/ и obj/.
+    Корень проекта остается чистым — только код.
+    Папка artifacts/ исключена в .gitignore.
+    Кеш NuGet-пакетов лежит отдельно в packages/ (см. nuget.config).
+  -->
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+
+  <!--
+    Рабочая папка агента (git worktree, см. Scripts/worktree.sh и AGENTS.md) берет пакеты из
+    кеша основной папки, а не качает свои сотни мегабайт. В рабочей папке .git — файл со строкой
+    «gitdir: <основная>/.git/worktrees/<имя>», в основной — каталог, и File.Exists отличает одну
+    от другой; где бы ни лежала рабочая папка, основная — три уровня выше ее gitdir.
+    Ссылку на кеш внутри рабочей папки не ставить: git worktree remove на Windows проходит по
+    ссылке и стирает содержимое кеша.
+  -->
+  <PropertyGroup Condition="$([System.IO.File]::Exists('$(MSBuildThisFileDirectory).git'))">
+    <PlWorktreeGitDir>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory).git').Trim().Substring(7).Trim())</PlWorktreeGitDir>
+    <PlWorktreeGitDir>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '$(PlWorktreeGitDir)'))</PlWorktreeGitDir>
+    <RestorePackagesPath>$([System.IO.Path]::GetFullPath('$(PlWorktreeGitDir)/../../../packages/packages'))</RestorePackagesPath>
+  </PropertyGroup>
+
+</Project>

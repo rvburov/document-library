@@ -1,0 +1,183 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!--
+      Два таргета. Базовый net10.0 — macOS, Linux, тесты и утилиты (Tests/* ссылаются на
+      проект и собираются под него). Windows-таргет net10.0-windows10.0.17763 нужен ровно
+      ради системных уведомлений: только под ним NuGet отдает WinRT-ассеты
+      DesktopNotifications.Windows. Под голым net10.0 подтягиваются сборки без WinRT, и
+      менеджер уведомлений падает с TypeLoadException. Windows собирать только вторым
+      таргетом: Scripts/windows-build.sh передает -f.
+    -->
+    <TargetFrameworks>net10.0;net10.0-windows10.0.17763</TargetFrameworks>
+    <!-- Разрешает собирать Windows-таргет на macOS/Linux (ref-паки тянутся с nuget). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PdfLibrary</RootNamespace>
+    <AssemblyName>PdfLibrary</AssemblyName>
+    <Version>0.1.0</Version>
+    <!-- Иконка, вшиваемая в Windows .exe (проводник, ярлык, закреп в панели задач).
+         Учитывается только при сборке под Windows; на других ОС игнорируется. -->
+    <ApplicationIcon>Assets\Branding\icon.ico</ApplicationIcon>
+    <!-- DPI PerMonitorV2 и запуск без прав администратора. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!--
+      При публикации в один файл (-p:PublishSingleFile=true) вшивать нативные
+      библиотеки (SkiaSharp, HarfBuzz, SQLite, PDFium) в .exe и распаковывать их при
+      запуске. Без этого Skia не грузится из бандла → DllNotFoundException и
+      приложение падает на старте. На обычные сборки свойство не влияет.
+    -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!--
+      Частичная предкомпиляция (ReadyToRun) при публикации — сборки, которые работают на
+      старте: сама программа, Avalonia, EF Core и SQLite, Serilog, Skia. Разбор PDF
+      компилируется при первом использовании: список исключений ниже.
+
+      Составной образ (PublishReadyToRunComposite) выключен явно: для single-file SDK включает
+      его сам, а он собирает в один файл все сборки вместе с платформой .NET и не признает
+      список исключений — дистрибутив вырастает почти вдвое.
+      Действует только в dotnet publish с RID (скрипты сборки); обычная сборка и тесты не меняются.
+    -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRunComposite>false</PublishReadyToRunComposite>
+    <!--
+      AVLN3001 «XAML resource won't be reachable via runtime loader, as no public constructor
+      was found». У окон и диалогов конструкторы с параметрами намеренно: окно без библиотеки —
+      наполовину собранный объект. Рантайм-загрузчиком XAML по строке avares:// проект не
+      пользуется, предупреждение неприменимо.
+    -->
+    <NoWarn>$(NoWarn);AVLN3001</NoWarn>
+    <!--
+      RS0030 — использован запрещенный символ из BannedSymbols.txt (программе сеть не нужна:
+      сетевые папки — это файлы). Именно ошибка: сборка с сетевым вызовом не собирается вовсе.
+    -->
+    <WarningsAsErrors>$(WarningsAsErrors);RS0030</WarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    Запрет сети без исключений. Первый рубеж — текстовый тест Tests/Unit/NoNetworkTests.cs:
+    он читает исходники. Анализатор ловит то, чего текст не видит: тип, использованный без
+    своего имени — через var, псевдоним using, наследника или обобщенный параметр.
+    Анализатор служебный и в дистрибутив не попадает (PrivateAssets=all).
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="BannedSymbols.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia"                        Version="11.2.3" />
+    <PackageReference Include="Avalonia.Desktop"               Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent"         Version="11.2.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter"           Version="11.2.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm"          Version="8.3.2"  />
+    <PackageReference Include="Microsoft.EntityFrameworkCore"  Version="9.0.1"  />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Текст и слова страниц PDF (поиск внутри документов, подсветка найденного). -->
+    <PackageReference Include="PdfPig"                          Version="0.1.15" />
+    <!-- Растеризация страниц PDF (миниатюры, панель чтения). Docnet.Core, а не PDFtoImage: тот
+         требует SkiaSharp 4.x, а Avalonia.Skia 11.2.3 жестко держит 2.88.9 — программа бы не
+         собралась. У Docnet.Core транзитивных зависимостей нет, внутри PDFium. -->
+    <PackageReference Include="Docnet.Core"                      Version="2.6.0" />
+    <!-- Кодирование миниатюр в PNG. Пакет и так приезжает транзитивно с Avalonia.Skia; пин
+         явный, т.к. используем его напрямую, и версия обязана совпадать с той, под которую
+         собрана Avalonia. -->
+    <PackageReference Include="SkiaSharp"                        Version="2.88.9" />
+    <!-- Диагностический журнал в отдельную базу logs.db (Serilog + SQLite-приемник).
+         Sinks.SQLite тянет Microsoft.Data.Sqlite, версия унифицируется вверх до 9.0.1
+         (уже в проекте через EF Core) — нативный SQLite один на всю программу. -->
+    <PackageReference Include="Serilog"                          Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.SQLite"             Version="7.0.0" />
+    <!-- Системные уведомления Windows и Linux (бэкенды netstandard2.0). Пакет .Avalonia НЕ
+         подключаем: он завязан на Avalonia 0.10 — менеджер создается вручную в Program. -->
+    <PackageReference Include="DesktopNotifications"             Version="1.3.1" />
+    <PackageReference Include="DesktopNotifications.Windows"     Version="1.3.1" />
+    <PackageReference Include="DesktopNotifications.FreeDesktop" Version="1.3.1" />
+  </ItemGroup>
+
+  <!--
+    Пины транзитивных зависимостей с известными уязвимостями. Сами по себе в коде не
+    используются — прямая ссылка нужна ровно затем, чтобы поднять версию, которую тянет
+    кто-то другой: NuGet берет наибольшую из затребованных.
+  -->
+  <ItemGroup>
+    <!-- CVE-2025-6965, SQLite до 3.50.2: повреждение памяти. Тянут EF Core Sqlite и
+         Serilog.Sinks.SQLite. Уязвимы версии по 2.1.11 включительно. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+    <!-- CVE-2021-24112, удаленное выполнение кода при разборе графики. Тянет
+         Microsoft.Toolkit.Uwp.Notifications (только Windows-таргет). Уязвимы 4.0.0–4.7.1. -->
+    <PackageReference Include="System.Drawing.Common" Version="4.7.2" />
+    <!-- GHSA-xrw6-gwf8-vvr9: подмена сигналов D-Bus и исчерпание дескрипторов.
+         Protocol тянет Avalonia.FreeDesktop, сам Tmds.DBus — DesktopNotifications.FreeDesktop. -->
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+    <PackageReference Include="Tmds.DBus" Version="0.92.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <!-- В сборку попадают только файлы бренда, что читаются в работе программы: icon.ico
+         (иконка окна и значка у часов) и icon-linux.png (иконка ярлыка .desktop). Остальное
+         нужно лишь сборочным скриптам, и они берут файлы с диска. -->
+    <AvaloniaResource Remove="Assets\Branding\icon-windows.png" />
+    <AvaloniaResource Remove="Assets\Branding\icon-macos.png" />
+    <AvaloniaResource Remove="Assets\Branding\icon.svg" />
+    <AvaloniaResource Remove="Assets\Branding\icon.icns" />
+    <AvaloniaResource Remove="Assets\Branding\Info.plist" />
+    <AvaloniaResource Remove="Assets\Branding\PdfLibrary.desktop" />
+  </ItemGroup>
+
+  <!-- Дата сборки — для экрана «О программе» («сборка от 20.10.2026»). -->
+  <ItemGroup>
+    <AssemblyMetadata Include="BuildDate" Value="$([System.DateTime]::UtcNow.ToString('yyyy-MM-dd'))" />
+  </ItemGroup>
+
+  <!-- Tests/ — отдельные проекты, в программу не входят -->
+  <ItemGroup>
+    <Compile    Remove="Tests\**" />
+    <AvaloniaXaml Remove="Tests\**" />
+    <AvaloniaResource Remove="Tests\**" />
+    <None       Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+  </ItemGroup>
+
+  <!-- packages/ — локальный кеш NuGet внутри репозитория (см. nuget.config). Пакеты
+       вроде Microsoft.NET.Test.Sdk несут .cs-файлы в build/, которые иначе попадают
+       в глоб «**/*.cs» этого проекта и ломают сборку. -->
+  <ItemGroup>
+    <Compile    Remove="packages\**" />
+    <AvaloniaXaml Remove="packages\**" />
+    <AvaloniaResource Remove="packages\**" />
+    <None       Remove="packages\**" />
+    <EmbeddedResource Remove="packages\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PdfLibrary.Tests.Unit" />
+    <InternalsVisibleTo Include="PdfLibrary.Tests.Integration" />
+    <InternalsVisibleTo Include="PdfLibrary.Tests.Screens" />
+  </ItemGroup>
+
+  <!--
+    Сборки без предкомпиляции (см. PublishReadyToRun выше): на старте не работают, а весят
+    много — разбор PDF; для Windows еще платформы других ОС и обертки Windows SDK для
+    уведомлений. Новая библиотека, которая работает на старте, в этот список попадать не должна.
+  -->
+  <ItemGroup>
+    <PublishReadyToRunExclude Include="UglyToad.PdfPig.dll;UglyToad.PdfPig.Core.dll;UglyToad.PdfPig.DocumentLayoutAnalysis.dll;UglyToad.PdfPig.Fonts.dll;UglyToad.PdfPig.Package.dll;UglyToad.PdfPig.Tokenization.dll;UglyToad.PdfPig.Tokens.dll;Docnet.Core.dll" />
+    <PublishReadyToRunExclude Include="Avalonia.DesignerSupport.dll;Avalonia.Remote.Protocol.dll" />
+  </ItemGroup>
+  <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+    <PublishReadyToRunExclude Include="Microsoft.Windows.SDK.NET.dll;Microsoft.Toolkit.Uwp.Notifications.dll" />
+    <PublishReadyToRunExclude Include="Avalonia.X11.dll;Avalonia.FreeDesktop.dll;Avalonia.Native.dll;Avalonia.Metal.dll;Avalonia.Vulkan.dll;Tmds.DBus.dll;Tmds.DBus.Protocol.dll;DesktopNotifications.FreeDesktop.dll" />
+  </ItemGroup>
+
+</Project>

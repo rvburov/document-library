@@ -1,0 +1,557 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:PdfLibrary.Controls">
+
+    <!--
+      Виды кнопок, полей и переключателей — по согласованному макету. Каждый вид — своя тема
+      (ControlTheme), а не класс поверх темы Fluent: у Fluent размеры и цвета состояний зашиты в
+      шаблон, и класс их не перебивает. Кнопка выбирает вид свойством Theme:
+        NavButton       — квадратная 30×30 в навбаре и шапке боковой панели (+, проверить папки);
+        ActivityButton  — 32×32 в панели разделов слева;
+        PrimaryButton   — акцентная пилюля («Найти», «Добавить», «Готово»);
+        SecondaryButton — серая пилюля («Отмена», «Обзор…»);
+        LinkButton      — действие-ссылка («Прочитать», «Остановить чтение»);
+        BarButton       — кнопка панели действий с выбранными;
+        MenuButton      — пункт выпадающего меню с иконкой и пояснением;
+        RowButton       — строка боковой панели (метки, разделы настроек);
+        PillButton      — пилюля выбора (группа источника, фильтр состояния);
+        IconButton      — маленькая 24×24 в поле поиска по документу;
+        SegmentButton   — пункт сегментного переключателя (размер карточки, масштаб).
+    -->
+
+    <Styles.Resources>
+
+        <!-- ── Основа всех кнопок ───────────────────────────────────────────── -->
+        <ControlTheme x:Key="ButtonCore" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
+                                      CornerRadius="{TemplateBinding CornerRadius}"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.45" />
+                <Setter Property="Cursor" Value="Arrow" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+            <Style Selector="^:pointerover">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+            </Style>
+            <Style Selector="^.on">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="ActivityButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource BrushHover}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+            </Style>
+            <Style Selector="^.on">
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="18,0" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+            <Setter Property="Background" Value="{DynamicResource BrushAccent}" />
+            <Setter Property="Foreground" Value="{StaticResource BrushOnAccent}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentHover}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+            <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Style Selector="^:pointerover">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+            </Style>
+            <Style Selector="^.on">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="LinkButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource BrushAccentHover}" />
+            </Style>
+            <Style Selector="^.muted">
+                <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+            </Style>
+            <Style Selector="^.muted:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource BrushPrimaryText}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="BarButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource BrushHover}" />
+            </Style>
+            <Style Selector="^.on">
+                <Setter Property="Background" Value="{DynamicResource BrushHover}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="MenuButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource BrushHover}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource BrushHover}" />
+            </Style>
+            <Style Selector="^.on">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentLight}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="PillButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Style Selector="^:pointerover">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+            </Style>
+            <Style Selector="^.on">
+                <Setter Property="Background" Value="{DynamicResource BrushAccentLight}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource BrushHover}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="SegmentButton" TargetType="Button" BasedOn="{StaticResource ButtonCore}">
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+            <Style Selector="^:pointerover">
+                <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+            </Style>
+            <Style Selector="^.on">
+                <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+        </ControlTheme>
+
+        <!-- ── Переключатель (вкл/выкл в настройках) ───────────────────────────── -->
+        <ControlTheme x:Key="Switch" TargetType="ToggleButton">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border x:Name="Track" CornerRadius="11"
+                            Background="{DynamicResource BrushLineStrong}">
+                        <Border x:Name="Knob" Width="18" Height="18" CornerRadius="9"
+                                Background="#FFFFFF" HorizontalAlignment="Left" Margin="2,0,0,0"
+                                BoxShadow="0 1 2 0 #33000000" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:checked /template/ Border#Track">
+                <Setter Property="Background" Value="{DynamicResource BrushAccent}" />
+            </Style>
+            <Style Selector="^:checked /template/ Border#Knob">
+                <Setter Property="Margin" Value="18,0,0,0" />
+            </Style>
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.45" />
+            </Style>
+        </ControlTheme>
+
+        <!-- ── Галочка ─────────────────────────────────────────────────────────── -->
+        <!--
+          Компактная, 14×14, как в макете. Размер в теме Fluent зашит локальными значениями
+          (20×20) прямо в шаблоне, и стилем его не перебить — поэтому своя тема по умолчанию.
+        -->
+        <ControlTheme x:Key="{x:Type CheckBox}" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,0,0,0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid ColumnDefinitions="Auto,*" Background="{TemplateBinding Background}">
+                        <Border x:Name="Box" Width="14" Height="14" CornerRadius="3"
+                                VerticalAlignment="Center"
+                                BorderThickness="1" BorderBrush="{DynamicResource BrushLineStrong}"
+                                Background="{DynamicResource BrushBg}">
+                            <c:Icon x:Name="Glyph" Width="11" Height="11" StrokeThickness="3.2"
+                                    Data="{StaticResource IconCheck}" Foreground="#FFFFFF" IsVisible="False" />
+                        </Border>
+                        <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          Padding="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Stretch"
+                                          HorizontalContentAlignment="Stretch"
+                                          IsVisible="{TemplateBinding Content, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Box">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+            </Style>
+            <Style Selector="^:checked /template/ Border#Box">
+                <Setter Property="Background" Value="{DynamicResource BrushAccent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+            </Style>
+            <Style Selector="^:checked /template/ c|Icon#Glyph">
+                <Setter Property="IsVisible" Value="True" />
+            </Style>
+            <Style Selector="^:indeterminate /template/ Border#Box">
+                <Setter Property="Background" Value="{DynamicResource BrushAccent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+            </Style>
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.45" />
+            </Style>
+        </ControlTheme>
+
+    </Styles.Resources>
+
+    <!-- ── Окна и текст ─────────────────────────────────────────────────────── -->
+
+    <Style Selector="Window">
+        <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+        <Setter Property="FontFamily" Value="{StaticResource FontFamilyBase}" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeBase}" />
+    </Style>
+
+    <Style Selector="TextBlock.small">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+    </Style>
+    <Style Selector="TextBlock.bold">
+        <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}" />
+    </Style>
+    <!-- Заголовок секции: «ИСТОЧНИКИ», «МЕТКИ», «ЗАПУСК И РАБОТА В ФОНЕ» -->
+    <Style Selector="TextBlock.section">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        <Setter Property="LetterSpacing" Value="0.2" />
+    </Style>
+    <Style Selector="TextBlock.title">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeLarge}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- ── Поле ввода ───────────────────────────────────────────────────────── -->
+    <Style Selector="TextBox">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource BrushTextSelection}" />
+        <Setter Property="SelectionForegroundBrush" Value="{DynamicResource BrushPrimaryText}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource BrushPrimaryText}" />
+    </Style>
+    <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushLineStrong}" />
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="TextBox /template/ TextBlock#PART_Watermark">
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+    </Style>
+    <!-- Поле без рамки внутри своей рамки: строка поиска, поиск по документу -->
+    <Style Selector="TextBox.bare">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="TextBox.bare:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox.bare:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- ── Выпадающий список ────────────────────────────────────────────────── -->
+    <Style Selector="ComboBox">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="10,0,6,0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBox:pointerover /template/ Border#Background">
+        <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="10,4" />
+    </Style>
+
+    <!-- ── Иконки ───────────────────────────────────────────────────────────── -->
+    <Style Selector="c|Icon.small">
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+    </Style>
+    <Style Selector="c|Icon.large">
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+    </Style>
+
+    <!-- ── Всплывающие панели (меню «+», тип документа, метки выбранных) ─────── -->
+    <Style Selector="Border.popup">
+        <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="BoxShadow" Value="0 10 30 0 #29000000" />
+    </Style>
+    <!-- Внутренняя белая подложка списка в панели -->
+    <Style Selector="Border.well">
+        <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+
+    <!-- Чипы карточки: тип, «файл не найден», «не прочитан», «изменен · перечитать», «скан» -->
+    <Style Selector="Border.chip">
+        <Setter Property="CornerRadius" Value="99" />
+        <Setter Property="Padding" Value="10,3" />
+    </Style>
+    <Style Selector="Border.chip > TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Border.chip.type">
+        <Setter Property="Background" Value="{DynamicResource BrushAccentLight}" />
+    </Style>
+    <Style Selector="Border.chip.type > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+    </Style>
+    <Style Selector="Border.chip.red">
+        <Setter Property="Background" Value="{DynamicResource BrushRedLight}" />
+    </Style>
+    <Style Selector="Border.chip.red > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource BrushRed}" />
+    </Style>
+    <Style Selector="Border.chip.orange">
+        <Setter Property="Background" Value="{DynamicResource BrushOrangeLight}" />
+    </Style>
+    <Style Selector="Border.chip.orange > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource BrushOrange}" />
+    </Style>
+    <Style Selector="Border.chip.gray">
+        <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+    </Style>
+    <Style Selector="Border.chip.gray > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+    </Style>
+    <Style Selector="Border.chip.green">
+        <Setter Property="Background" Value="{DynamicResource BrushGreenLight}" />
+    </Style>
+    <Style Selector="Border.chip.green > TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource BrushGreen}" />
+    </Style>
+
+    <!-- Карточка ленты: рамка, выбранная — акцентом с голубой подложкой, под мышью — тень. -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+    </Style>
+    <Style Selector="Border.card:pointerover">
+        <Setter Property="BoxShadow" Value="0 2 10 0 #12000000" />
+    </Style>
+    <Style Selector="Border.card.selected">
+        <Setter Property="Background" Value="{DynamicResource BrushAccentLight}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+    </Style>
+    <!-- Подложка выбранной карточки того же цвета, что чип типа, — чип на ней белый. -->
+    <Style Selector="Border.card.selected Border.chip.type">
+        <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+    </Style>
+    <!-- Миниатюра страницы на рельсе панели чтения: текущая — акцентной рамкой. -->
+    <Style Selector="Border.thumb">
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="BoxShadow" Value="0 1 2 0 #1F000000" />
+    </Style>
+    <Style Selector="Border.thumb.current">
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+    </Style>
+    <Style Selector="TextBlock.pageno">
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+    </Style>
+    <Style Selector="TextBlock.pageno.current">
+        <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Строка дерева источников -->
+    <Style Selector="Border.trow:pointerover">
+        <Setter Property="Background" Value="{DynamicResource BrushHover}" />
+    </Style>
+
+    <!-- Всплывающая панель без рамки и полей самого Flyout: оформление дает Border.popup внутри. -->
+    <Style Selector="FlyoutPresenter.plain">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="MaxWidth" Value="600" />
+        <Setter Property="MaxHeight" Value="800" />
+    </Style>
+
+    <!-- ── Экраны настроек ──────────────────────────────────────────────────── -->
+    <!-- Группа строк настроек: рамка со скруглением, строки разделены линией -->
+    <Style Selector="Border.group">
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+    <Style Selector="Border.srow">
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+    <Style Selector="Border.srow:nth-child(1)">
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <!-- Заголовок группы: «ЗАПУСК И РАБОТА В ФОНЕ» -->
+    <Style Selector="TextBlock.h2">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        <Setter Property="LetterSpacing" Value="0.2" />
+        <Setter Property="Margin" Value="0,22,0,8" />
+    </Style>
+    <Style Selector="TextBlock.desc">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        <Setter Property="LineHeight" Value="15" />
+        <Setter Property="Margin" Value="0,2,0,0" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <!-- Пояснение под группой -->
+    <Style Selector="TextBlock.note">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="2,8,0,0" />
+    </Style>
+    <!-- Сегментный переключатель: серая подложка, выбранный пункт — белая плашка -->
+    <Style Selector="Border.segment">
+        <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="2" />
+    </Style>
+
+    <!-- Тонкая полоса прокрутки, как в макете -->
+    <Style Selector="ScrollBar">
+        <Setter Property="AllowAutoHide" Value="True" />
+    </Style>
+
+</Styles>

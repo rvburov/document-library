@@ -1,0 +1,106 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Иконки — контурные, на сетке 24×24, как в макете: рисуются Path с обводкой (Stroke) без
+      заливки, толщина и цвет — у потребителя (стиль Path.icon в Controls.axaml). Окружности и
+      прямоугольники макета переведены в дуги пути, чтобы каждая иконка была одной геометрией.
+    -->
+
+    <!-- Скрыть боковую панель -->
+    <StreamGeometry x:Key="IconSidebarClose">M5,3 H19 A2,2 0 0 1 21,5 V19 A2,2 0 0 1 19,21 H5 A2,2 0 0 1 3,19 V5 A2,2 0 0 1 5,3 Z M9 3v18 M16 15l-3-3 3-3</StreamGeometry>
+
+    <!-- Показать боковую панель -->
+    <StreamGeometry x:Key="IconSidebarOpen">M5,3 H19 A2,2 0 0 1 21,5 V19 A2,2 0 0 1 19,21 H5 A2,2 0 0 1 3,19 V5 A2,2 0 0 1 5,3 Z M9 3v18 M14 9l3 3-3 3</StreamGeometry>
+
+    <!-- Библиотека (книга с закладками) -->
+    <StreamGeometry x:Key="IconLibrary">M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z M6 8h2 M6 12h2 M16 8h2 M16 12h2</StreamGeometry>
+
+    <!-- Настройки (два ползунка) -->
+    <StreamGeometry x:Key="IconSettings">M20 7h-9 M14 17H5 M14,17 A3,3 0 1 0 20,17 A3,3 0 1 0 14,17 Z M4,7 A3,3 0 1 0 10,7 A3,3 0 1 0 4,7 Z</StreamGeometry>
+
+    <!-- Плюс -->
+    <StreamGeometry x:Key="IconPlus">M5 12h14 M12 5v14</StreamGeometry>
+
+    <!-- Минус -->
+    <StreamGeometry x:Key="IconMinus">M5 12h14</StreamGeometry>
+
+    <!-- Свернуть и развернуть группы -->
+    <StreamGeometry x:Key="IconChevronsUpDown">M7 15l5 5 5-5 M7 9l5-5 5 5</StreamGeometry>
+
+    <!-- Проверить папки -->
+    <StreamGeometry x:Key="IconRefresh">M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16 M8 16H3v5</StreamGeometry>
+
+    <!-- Источник -->
+    <StreamGeometry x:Key="IconFolderPlus">M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z M12 10v6 M9 13h6</StreamGeometry>
+
+    <!-- Группа источников -->
+    <StreamGeometry x:Key="IconFolders">M20 17a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.9a2 2 0 0 1-1.69-.9l-.81-1.2a2 2 0 0 0-1.67-.9H8a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2Z M2 8v11a2 2 0 0 0 2 2h14</StreamGeometry>
+
+    <!-- Метка -->
+    <StreamGeometry x:Key="IconTag">M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z</StreamGeometry>
+
+    <!-- Вниз -->
+    <StreamGeometry x:Key="IconChevronDown">M6 9l6 6 6-6</StreamGeometry>
+
+    <!-- Вверх -->
+    <StreamGeometry x:Key="IconChevronUp">M18 15l-6-6-6 6</StreamGeometry>
+
+    <!-- Вправо -->
+    <StreamGeometry x:Key="IconChevronRight">M9 18l6-6-6-6</StreamGeometry>
+
+    <!-- Поиск -->
+    <StreamGeometry x:Key="IconSearch">M3,11 A8,8 0 1 0 19,11 A8,8 0 1 0 3,11 Z M21 21l-4.3-4.3</StreamGeometry>
+
+    <!-- Крестик -->
+    <StreamGeometry x:Key="IconClose">M18 6L6 18 M6 6l12 12</StreamGeometry>
+
+    <!-- Открыть панель чтения -->
+    <StreamGeometry x:Key="IconReaderOpen">M9 6l-6 6 6 6 M3 12h14 M21 19V5</StreamGeometry>
+
+    <!-- Закрыть панель чтения -->
+    <StreamGeometry x:Key="IconReaderClose">M17 12H3 M11 18l6-6-6-6 M21 5v14</StreamGeometry>
+
+    <!-- Развернуть документ -->
+    <StreamGeometry x:Key="IconExpand">M3 5v14 M21 12H7 M15 18l6-6-6-6</StreamGeometry>
+
+    <!-- Прочитать (открытая книга) -->
+    <StreamGeometry x:Key="IconRead">M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z</StreamGeometry>
+
+    <!-- Открыть в другой программе -->
+    <StreamGeometry x:Key="IconExternal">M15 3h6v6 M10 14L21 3 M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6</StreamGeometry>
+
+    <!-- Копировать в папку, выгрузить -->
+    <StreamGeometry x:Key="IconDownload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3</StreamGeometry>
+
+    <!-- Галочка -->
+    <StreamGeometry x:Key="IconCheck">M20 6L9 17l-5-5</StreamGeometry>
+
+    <!-- Действия (три точки) -->
+    <StreamGeometry x:Key="IconMore">M11,12 A1,1 0 1 0 13,12 A1,1 0 1 0 11,12 Z M18,12 A1,1 0 1 0 20,12 A1,1 0 1 0 18,12 Z M4,12 A1,1 0 1 0 6,12 A1,1 0 1 0 4,12 Z</StreamGeometry>
+
+    <!-- Настройки → Общее -->
+    <StreamGeometry x:Key="IconGeneral">M10 8H14M12 21V12M12 8V3M17 16H21M19 12V3M19 21V16M3 14H7M5 10V3M5 21V14</StreamGeometry>
+
+    <!-- Настройки → Источники и чтение -->
+    <StreamGeometry x:Key="IconFolderTree">M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z M3 5a2 2 0 0 0 2 2h3 M3 3v13a2 2 0 0 0 2 2h3</StreamGeometry>
+
+    <!-- Настройки → Лента и карточки -->
+    <StreamGeometry x:Key="IconCards">M12 7V21 M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z</StreamGeometry>
+
+    <!-- Настройки → Оформление -->
+    <StreamGeometry x:Key="IconSun">M8,12 A4,4 0 1 0 16,12 A4,4 0 1 0 8,12 Z M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41</StreamGeometry>
+
+    <!-- Настройки → Диагностика -->
+    <StreamGeometry x:Key="IconCode">M18 16l4-4-4-4M6 8l-4 4 4 4M14.5 4l-5 16</StreamGeometry>
+
+    <!-- Настройки → О программе -->
+    <StreamGeometry x:Key="IconInfo">M2,12 A10,10 0 1 0 22,12 A10,10 0 1 0 2,12 Z M12 16v-5M11.99 8h.02</StreamGeometry>
+
+    <!-- Документ -->
+    <StreamGeometry x:Key="IconFileText">M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z M14 2v4a2 2 0 0 0 2 2h4 M10 9H8 M16 13H8 M16 17H8</StreamGeometry>
+
+    <!-- Часы -->
+    <StreamGeometry x:Key="IconClock">M2,12 A10,10 0 1 0 22,12 A10,10 0 1 0 2,12 Z M12 6v6l4 2</StreamGeometry>
+
+</ResourceDictionary>

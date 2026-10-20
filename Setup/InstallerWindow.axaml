@@ -1,0 +1,146 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:setup="using:PdfLibrary.Setup"
+        x:Class="PdfLibrary.Setup.InstallerWindow"
+        Width="{StaticResource DialogWidthBase}" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BrushBg}"
+        Title="Библиотека PDF — установка">
+
+    <!-- Высота окна идет за содержимым: тело меняется от состояния («копий не найдено» —
+         три строки, «несколько копий + обновление + идет установка» — список, желтая плашка
+         и индикатор). Фиксированная высота либо не вмещала худший случай — тело наезжало на
+         футер, — либо оставляла пустоту в простом. -->
+
+
+    <DockPanel>
+
+        <!-- Шапка -->
+        <Border DockPanel.Dock="Top" Height="76"
+                Background="{DynamicResource BrushSecondaryBg}"
+                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+            <StackPanel VerticalAlignment="Center" Margin="24,0">
+                <TextBlock Text="Библиотека PDF"
+                           FontSize="{DynamicResource FontSizeLarge}"
+                           FontWeight="{StaticResource FontWeightBold}"
+                           Foreground="{DynamicResource BrushPrimaryText}" />
+                <TextBlock x:Name="VersionText" Text="Версия"
+                           FontSize="{DynamicResource FontSizeSmall}"
+                           Foreground="{DynamicResource BrushSecondaryText}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Футер: галочка данных стоит НАД кнопками и относится только к «Удалить» —
+             так однозначно читается, к какому действию она применяется. -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource BrushSecondaryBg}"
+                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineTop}">
+            <StackPanel Margin="24,12" Spacing="10">
+                <CheckBox x:Name="RemoveDataCheck" IsVisible="False"
+                          Content="вместе с данными пользователя"
+                          FontSize="{DynamicResource FontSizeSmall}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                    <Button x:Name="UninstallBtn" Content="Удалить"    Theme="{StaticResource SecondaryButton}" Click="OnUninstall" IsVisible="False" />
+                    <Button x:Name="CancelBtn"    Content="Отмена"     Theme="{StaticResource SecondaryButton}" Click="OnCancel" />
+                    <Button x:Name="PrimaryBtn"   Content="Установить" Theme="{StaticResource PrimaryButton}" Click="OnPrimary" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Тело -->
+        <StackPanel Margin="24,18" Spacing="12">
+
+            <TextBlock x:Name="SubtitleText" TextWrapping="Wrap"
+                       Text="Поиск установленных копий…"
+                       Foreground="{DynamicResource BrushSecondaryText}" />
+
+            <!-- Одна найденная копия: путь и версия строкой -->
+            <StackPanel x:Name="SingleBlock" IsVisible="False" Spacing="2">
+                <TextBlock x:Name="SinglePathText" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrushPrimaryText}" />
+                <TextBlock x:Name="SingleVersionText"
+                           FontSize="{DynamicResource FontSizeSmall}"
+                           Foreground="{DynamicResource BrushSecondaryText}" />
+            </StackPanel>
+
+            <!-- Несколько копий: выбор, к какой относятся кнопки. Без прокрутки видно не
+                 больше VisibleInstallRows строк (code-behind считает MaxHeight списка по высоте
+                 строки), остальные доматываются полосой. Padding карточки нулевой и ClipToBounds,
+                 чтобы полоса шла вплотную к краю, а ее углы не вылезали за скругление; воздух —
+                 Padding самого списка, он живет ВНУТРИ прокрутки. -->
+            <Border x:Name="InstallsCard" IsVisible="False"
+                    Background="{DynamicResource BrushSecondaryBg}"
+                    CornerRadius="{StaticResource RadiusSmall}"
+                    ClipToBounds="True" Padding="0">
+                <ListBox x:Name="InstallsList"
+                         Background="Transparent" BorderThickness="0" Padding="0,4"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         SelectionChanged="OnInstallSelected">
+                    <ListBox.Styles>
+                        <!-- Строка известной высоты (как кнопки и поля ввода) — по ней и
+                             считается высота списка на VisibleInstallRows строк. -->
+                        <Style Selector="ListBox#InstallsList ListBoxItem">
+                            <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+                            <Setter Property="Padding"   Value="10,0" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="setup:Installation">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Text="{Binding Dir}"
+                                           TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
+                                <TextBlock Grid.Column="1" Text="{Binding VersionText}"
+                                           FontSize="{DynamicResource FontSizeSmall}"
+                                           Foreground="{DynamicResource BrushSecondaryText}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <Button x:Name="OtherFolderBtn" Theme="{StaticResource LinkButton}" IsVisible="False"
+                    Content="Установить в другую папку…" Click="OnOtherFolder" />
+
+            <StackPanel x:Name="PathBlock" Spacing="6">
+                <TextBlock Text="Папка установки"
+                           FontSize="{DynamicResource FontSizeSmall}"
+                           FontWeight="{StaticResource FontWeightBold}"
+                           Foreground="{DynamicResource BrushPrimaryText}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox x:Name="PathBox" Grid.Column="0" Height="30"
+                             VerticalContentAlignment="Center" Margin="0,0,8,0"
+                             Background="{DynamicResource BrushSecondaryBg}"
+                             CornerRadius="{StaticResource RadiusSmall}" />
+                    <Button Grid.Column="1" Content="Обзор" Theme="{StaticResource SecondaryButton}" Click="OnBrowse" />
+                </Grid>
+                <!-- Виден, когда путь вписали руками и к нему допишется своя подпапка:
+                     человек должен заранее знать, куда реально ляжет программа. -->
+                <TextBlock x:Name="EffectivePathText" IsVisible="False" TextWrapping="Wrap"
+                           FontSize="{DynamicResource FontSizeSmall}"
+                           Foreground="{DynamicResource BrushSecondaryText}" />
+            </StackPanel>
+
+            <Border x:Name="WarnBox" IsVisible="False"
+                    Background="{DynamicResource BrushOrangeLight}" BorderBrush="{DynamicResource BrushOrangeLight}" BorderThickness="1"
+                    CornerRadius="6" Padding="10,8">
+                <TextBlock x:Name="WarnText" TextWrapping="Wrap" Foreground="{DynamicResource BrushOrange}"
+                           FontSize="{DynamicResource FontSizeSmall}" />
+            </Border>
+
+            <CheckBox x:Name="ShortcutCheck" Content="Создать ярлык на рабочем столе" IsChecked="True" />
+
+            <!-- Ход установки: полоса и этап -->
+            <StackPanel x:Name="ProgressBlock" IsVisible="False" Spacing="6">
+                <ProgressBar x:Name="ProgressBar" Minimum="0" Maximum="1" Height="4" MinHeight="4"
+                             Foreground="{DynamicResource BrushAccent}"
+                             Background="{DynamicResource BrushSeparator}" />
+                <TextBlock x:Name="ProgressText" Classes="small muted" />
+            </StackPanel>
+
+        </StackPanel>
+
+    </DockPanel>
+</Window>

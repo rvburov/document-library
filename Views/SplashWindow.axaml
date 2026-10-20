@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PdfLibrary.Views.SplashWindow"
+        Width="460" Height="200"
+        CanResize="False"
+        ShowInTaskbar="True"
+        SystemDecorations="None"
+        WindowStartupLocation="CenterScreen"
+        Title="Библиотека PDF">
+
+    <!-- Заставка на время открытия библиотеки: шапка как у установщика — название и версия. -->
+    <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="1">
+        <DockPanel>
+            <Border DockPanel.Dock="Top" Height="76"
+                    Background="{DynamicResource BrushSecondaryBg}"
+                    BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                <StackPanel VerticalAlignment="Center" Margin="24,0">
+                    <TextBlock Text="Библиотека PDF" Classes="title" />
+                    <TextBlock x:Name="VersionText" Classes="small muted" />
+                </StackPanel>
+            </Border>
+
+            <StackPanel Margin="24,20" Spacing="12" VerticalAlignment="Center">
+                <TextBlock x:Name="StageText" Text="Открываю библиотеку…" Classes="muted" TextWrapping="Wrap" />
+                <ProgressBar x:Name="Bar" IsIndeterminate="True" Height="4" MinHeight="4"
+                             Foreground="{DynamicResource BrushAccent}"
+                             Background="{DynamicResource BrushSeparator}" />
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</Window>

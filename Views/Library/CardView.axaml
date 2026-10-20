@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:PdfLibrary.Controls"
+             xmlns:vm="using:PdfLibrary.Views.Library"
+             x:Class="PdfLibrary.Views.Library.CardView"
+             x:DataType="vm:CardViewModel">
+
+    <!--
+      Карточка ленты (макет, доска 1): галочка выбора, плитка с миниатюрой и лентой «A4 · 48 с.»,
+      название, путь, найденный текст, действия, справа — тип, состояние, метки и размер. Та же
+      карточка — живой пример на экране «Настройки → Лента и карточки».
+    -->
+    <Border Classes="card" Classes.selected="{Binding IsSelected}"
+            Margin="0,0,0,8" Padding="10,10,14,10"
+            MinHeight="{Binding Metrics.MinHeight}"
+            CornerRadius="{StaticResource RadiusMedium}" BorderThickness="1"
+            DoubleTapped="OnCardDoubleTapped">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+            <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Padding="0"
+                      VerticalAlignment="Center" ToolTip.Tip="Выбрать документ" />
+
+            <!-- Плитка: миниатюра первой страницы и лента «A4 · 48 с.» -->
+            <Border Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center"
+                    Width="{Binding Metrics.TileWidth}" ClipToBounds="True"
+                    CornerRadius="4" BorderThickness="1"
+                    BorderBrush="{DynamicResource BrushLineStrong}"
+                    Background="{DynamicResource BrushPage}">
+                <StackPanel>
+                    <Panel Height="{Binding Metrics.TileHeight}" IsVisible="{Binding ShowThumbnail}">
+                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"
+                               VerticalAlignment="Top" />
+                    </Panel>
+                    <Border Height="{Binding Metrics.TapeHeight}" IsVisible="{Binding ShowThumbnail}"
+                            Background="{DynamicResource BrushSecondaryBg}">
+                        <TextBlock Text="{Binding Tape}" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource BrushSecondaryText}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel IsVisible="{Binding ShowTileText}" VerticalAlignment="Center"
+                                Height="{Binding Metrics.TileHeight}" Spacing="0"
+                                Background="{DynamicResource BrushSecondaryBg}">
+                        <TextBlock Text="{Binding TileFormat}" FontWeight="SemiBold" FontSize="13"
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource BrushSecondaryText}" />
+                        <TextBlock Text="{Binding TilePages}" FontSize="10"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource BrushSecondaryText}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Название, путь, найденный текст, действия -->
+            <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="14"
+                            Margin="0,6,0,0" Opacity="{Binding ActionsOpacity}">
+                    <Button Theme="{StaticResource LinkButton}" Click="OnReadCard"
+                            IsEnabled="{Binding !IsMissing}">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <c:Icon Classes="small" Data="{StaticResource IconRead}" />
+                            <TextBlock Text="Прочитать" />
+                        </StackPanel>
+                    </Button>
+                    <Button Theme="{StaticResource LinkButton}" Classes="muted" Click="OnOpenCard"
+                            IsEnabled="{Binding !IsMissing}">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <c:Icon Classes="small" Data="{StaticResource IconExternal}" />
+                            <TextBlock Text="Открыть" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                               Classes.muted="{Binding IsMissing}" />
+                    <TextBlock Text="{Binding PathLine}" Classes="small muted" TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding ShowPath}" />
+                    <vm:SnippetText Snippet="{Binding Snippet}" IsVisible="{Binding HasSnippet}"
+                                    Highlight="{DynamicResource BrushHighlight}"
+                                    Margin="0,3,0,0" FontSize="11.5" LineHeight="16"
+                                    Foreground="{DynamicResource BrushSecondaryText}"
+                                    TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                    MaxLines="{Binding Metrics.SnippetLines}" />
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Тип, состояние, метки, размер -->
+            <StackPanel Grid.Column="3" MaxWidth="220" Margin="12,0,0,0" Spacing="5"
+                        VerticalAlignment="Center" HorizontalAlignment="Right">
+                <Border Classes="chip type" HorizontalAlignment="Right" IsVisible="{Binding ShowTypeChip}">
+                    <TextBlock Text="{Binding TypeText}" />
+                </Border>
+                <Border Classes="chip red" HorizontalAlignment="Right" IsVisible="{Binding IsMissing}">
+                    <TextBlock Text="файл не найден" />
+                </Border>
+                <Border Classes="chip gray" HorizontalAlignment="Right" IsVisible="{Binding IsUnread}">
+                    <TextBlock Text="не прочитан" />
+                </Border>
+                <Border Classes="chip orange" HorizontalAlignment="Right" IsVisible="{Binding IsChanged}">
+                    <TextBlock Text="изменен · перечитать" />
+                </Border>
+                <Border Classes="chip gray" HorizontalAlignment="Right" IsVisible="{Binding IsScan}">
+                    <TextBlock Text="скан, без текста" />
+                </Border>
+                <Border Classes="chip gray" HorizontalAlignment="Right" IsVisible="{Binding IsFailed}">
+                    <TextBlock Text="не прочитался" />
+                </Border>
+                <ItemsControl ItemsSource="{Binding Tags}" IsVisible="{Binding HasTags}"
+                              HorizontalAlignment="Right">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel HorizontalAlignment="Right" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TagChip">
+                            <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,1,0,1">
+                                <Ellipse Width="7" Height="7" Fill="{Binding Color}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Name}" Classes="small muted" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding Meta}" Classes="small muted" HorizontalAlignment="Right"
+                           IsVisible="{Binding ShowMeta}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

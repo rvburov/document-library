@@ -1,0 +1,95 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Палитра программы — токены согласованного макета (docs/mockup.md, «Визуальные изменения»).
+      Две темы: светлая и темная. Цвета живут в словарях тем, и все потребители берут их через
+      DynamicResource — тогда смена темы в «Оформлении» перекрашивает окно на ходу.
+
+      Имена — как в SmartBase (BrushBg, BrushSecondaryBg, BrushSeparator…): перенесенная разметка
+      ложится на них без правки.
+    -->
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Light">
+            <!-- Фоны -->
+            <SolidColorBrush x:Key="BrushBg"            Color="#FFFFFF" />
+            <SolidColorBrush x:Key="BrushSecondaryBg"   Color="#F2F2F7" />
+            <SolidColorBrush x:Key="BrushInactiveBg"    Color="#FAFAFA" />
+            <SolidColorBrush x:Key="BrushHover"         Color="#EAEAEF" />
+            <!-- Линии: разделитель и линия сильнее (рамка плитки, пустой переключатель). -->
+            <SolidColorBrush x:Key="BrushSeparator"     Color="#E5E5EA" />
+            <SolidColorBrush x:Key="BrushLineStrong"    Color="#C7C7CC" />
+            <!-- Текст -->
+            <SolidColorBrush x:Key="BrushPrimaryText"   Color="#1C1C1E" />
+            <SolidColorBrush x:Key="BrushSecondaryText" Color="#6C6C70" />
+            <!-- Акцент: ссылки, действия, выбранное -->
+            <SolidColorBrush x:Key="BrushAccent"        Color="#0A64D8" />
+            <SolidColorBrush x:Key="BrushAccentHover"   Color="#084FA8" />
+            <SolidColorBrush x:Key="BrushAccentLight"   Color="#E6EFFC" />
+            <!-- Смысловые пары «надпись + подложка» для чипов -->
+            <SolidColorBrush x:Key="BrushRed"           Color="#C4291F" />
+            <SolidColorBrush x:Key="BrushRedLight"      Color="#FDECEA" />
+            <SolidColorBrush x:Key="BrushGreen"         Color="#1E7A3C" />
+            <SolidColorBrush x:Key="BrushGreenLight"    Color="#E3F4E8" />
+            <SolidColorBrush x:Key="BrushOrange"        Color="#9A5200" />
+            <SolidColorBrush x:Key="BrushOrangeLight"   Color="#FFF1DE" />
+            <!-- Найденное: подложка слова в сниппете и на странице; текущее совпадение -->
+            <SolidColorBrush x:Key="BrushHighlight"     Color="#FFE98A" />
+            <!-- Лист PDF: белый как бумага в любой теме -->
+            <SolidColorBrush x:Key="BrushPage"          Color="#FFFFFF" />
+            <!-- Затемнение под диалогом -->
+            <SolidColorBrush x:Key="BrushScrim"         Color="#521C1C1E" />
+            <SolidColorBrush x:Key="BrushTextSelection" Color="#C7C7CC" />
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="BrushBg"            Color="#1C1C1E" />
+            <SolidColorBrush x:Key="BrushSecondaryBg"   Color="#262629" />
+            <SolidColorBrush x:Key="BrushInactiveBg"    Color="#222225" />
+            <SolidColorBrush x:Key="BrushHover"         Color="#2E2E32" />
+            <SolidColorBrush x:Key="BrushSeparator"     Color="#38383C" />
+            <SolidColorBrush x:Key="BrushLineStrong"    Color="#4C4C52" />
+            <SolidColorBrush x:Key="BrushPrimaryText"   Color="#F2F2F7" />
+            <SolidColorBrush x:Key="BrushSecondaryText" Color="#A6A6AD" />
+            <SolidColorBrush x:Key="BrushAccent"        Color="#5AA2FF" />
+            <SolidColorBrush x:Key="BrushAccentHover"   Color="#85BBFF" />
+            <SolidColorBrush x:Key="BrushAccentLight"   Color="#1C3250" />
+            <SolidColorBrush x:Key="BrushRed"           Color="#FF8F86" />
+            <SolidColorBrush x:Key="BrushRedLight"      Color="#3B2321" />
+            <SolidColorBrush x:Key="BrushGreen"         Color="#7FD99C" />
+            <SolidColorBrush x:Key="BrushGreenLight"    Color="#1E3326" />
+            <SolidColorBrush x:Key="BrushOrange"        Color="#FFB866" />
+            <SolidColorBrush x:Key="BrushOrangeLight"   Color="#3A2C18" />
+            <SolidColorBrush x:Key="BrushHighlight"     Color="#6B5600" />
+            <SolidColorBrush x:Key="BrushPage"          Color="#F4F4F1" />
+            <SolidColorBrush x:Key="BrushScrim"         Color="#80000000" />
+            <SolidColorBrush x:Key="BrushTextSelection" Color="#4C4C52" />
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+
+    <!--
+      Найденное на листе PDF: лист в обеих темах светлый, поэтому подсветка на нем одна — желтая
+      для всех совпадений и оранжевая с обводкой для текущего. Полупрозрачные: под ними должен
+      читаться текст страницы.
+    -->
+    <SolidColorBrush x:Key="BrushPageHit"         Color="#8CFFE98A" />
+    <SolidColorBrush x:Key="BrushPageHitCurrent"  Color="#99FFB340" />
+    <SolidColorBrush x:Key="BrushPageHitOutline"  Color="#E07B00" />
+    <!-- Счетчик совпадений на миниатюре страницы — желтый с темной цифрой в любой теме. -->
+    <SolidColorBrush x:Key="BrushBadge"           Color="#FFE98A" />
+    <SolidColorBrush x:Key="BrushBadgeText"       Color="#1C1C1E" />
+    <!-- Текст на акцентной кнопке -->
+    <SolidColorBrush x:Key="BrushOnAccent"        Color="#FFFFFF" />
+
+    <!-- Переопределение системного акцента Fluent: фокус, выделение текста, ползунки. -->
+    <Color x:Key="SystemAccentColor">#0A64D8</Color>
+    <Color x:Key="SystemAccentColorLight1">#3B83E0</Color>
+    <Color x:Key="SystemAccentColorLight2">#6CA2E8</Color>
+    <Color x:Key="SystemAccentColorLight3">#9DC1F0</Color>
+    <Color x:Key="SystemAccentColorDark1">#084FA8</Color>
+    <Color x:Key="SystemAccentColorDark2">#063B7E</Color>
+    <Color x:Key="SystemAccentColorDark3">#042854</Color>
+
+</ResourceDictionary>

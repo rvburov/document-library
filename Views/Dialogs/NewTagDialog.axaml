@@ -1,0 +1,22 @@
+<d:DialogBase xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:d="using:PdfLibrary.Views.Dialogs"
+              x:Class="PdfLibrary.Views.Dialogs.NewTagDialog">
+
+    <!-- Макет: «Кнопка «+»: меню и окна» → «Метка». -->
+    <StackPanel>
+        <TextBlock Text="Название метки" FontSize="12" Margin="0,10,0,6" />
+        <TextBox x:Name="NameBox" Watermark="Например, Насосная станция" TextChanged="OnNameChanged" />
+
+        <TextBlock Text="Цвет" FontSize="12" Margin="0,14,0,6" />
+        <StackPanel x:Name="Swatches" Orientation="Horizontal" Spacing="10" />
+
+        <CheckBox x:Name="ApplyBox" Margin="0,16,0,0" IsChecked="True" IsVisible="False" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,20,0,0">
+            <Button Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
+            <Button x:Name="CreateButton" Theme="{StaticResource PrimaryButton}" Content="Создать"
+                    Click="OnCreate" IsEnabled="False" />
+        </StackPanel>
+    </StackPanel>
+</d:DialogBase>

@@ -1,0 +1,30 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PdfLibrary.App"
+             RequestedThemeVariant="Light">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Colors.axaml" />
+                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Typography.axaml" />
+                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Metrics.axaml" />
+                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Icons.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- Иконка программы для всех окон: заголовок, панель задач, Alt-Tab. .ico, а не .png:
+             Win32 сам берет готовый слой нужного размера, и значок не выходит мыльным. На macOS
+             иконка окна не показывается — там она из .app-бандла. -->
+        <Style Selector="Window">
+            <Setter Property="Icon" Value="/Assets/Branding/icon.ico" />
+        </Style>
+
+        <StyleInclude Source="avares://PdfLibrary/Assets/Styles/Controls.axaml" />
+    </Application.Styles>
+
+</Application>
