@@ -258,23 +258,37 @@ jobs:
                 open
                 update without registering applications
                 delay 2
+                close
               end tell
             end tell
           APPLESCRIPT
 
-          hdiutil detach -quiet "/Volumes/$VOL"
+          # Отключение тома. Finder отпускает его не сразу после оформления окна, и detach
+          # падает с кодом 16 («Resource busy») — так упала сборка osx-arm64 выпуска 1.0.0.
+          # Поэтому несколько попыток с паузой, последняя — с -force; sync перед ней сбрасывает
+          # на диск .DS_Store с раскладкой окна.
+          detach() {
+            sync
+            for _ in 1 2 3 4 5; do
+              hdiutil detach -quiet "$1" && return 0
+              sleep 3
+            done
+            hdiutil detach -quiet -force "$1"
+          }
+
+          detach "/Volumes/$VOL"
           hdiutil convert -quiet rw.dmg -format UDZO -imagekey zlib-level=9 -o "$DMG"
           rm -f rw.dmg
 
           # Контрольное монтирование: внутри ровно один видимый элемент, бит +x и подпись целы.
           hdiutil attach -quiet -nobrowse -mountpoint /Volumes/pl-check "$DMG"
           [ "$(find /Volumes/pl-check -mindepth 1 -maxdepth 1 -not -name '.*' | wc -l | tr -d ' ')" = "1" ] \
-            || { echo "::error::в образе не один элемент"; hdiutil detach -quiet /Volumes/pl-check; exit 1; }
+            || { echo "::error::в образе не один элемент"; detach /Volumes/pl-check; exit 1; }
           [ -x "/Volumes/pl-check/PdfLibrary-Setup.app/Contents/MacOS/PdfLibrary" ] \
-            || { echo "::error::в образе потерян бит +x"; hdiutil detach -quiet /Volumes/pl-check; exit 1; }
+            || { echo "::error::в образе потерян бит +x"; detach /Volumes/pl-check; exit 1; }
           codesign -v "/Volumes/pl-check/PdfLibrary-Setup.app" \
-            || { echo "::error::подпись не пережила упаковку"; hdiutil detach -quiet /Volumes/pl-check; exit 1; }
-          hdiutil detach -quiet /Volumes/pl-check
+            || { echo "::error::подпись не пережила упаковку"; detach /Volumes/pl-check; exit 1; }
+          detach /Volumes/pl-check
 
       - name: Упаковка — Linux
         if: runner.os == 'Linux'
