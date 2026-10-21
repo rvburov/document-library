@@ -136,7 +136,7 @@ Setup/               установщик, удаление, обновлени�
 Logging/             журнал, crash.log, медленные операции и зависания
 Notifications/, Utils/
 Tests/               Unit, Integration, стенд экранов Screens
-Scripts/             сборка под ОС, иконки, рабочие папки агентов
+Scripts/             сборка под ОС, иконки, проверка на всех ОС, выпуск
 docs/                документация, ROADMAP, макет
 ```
 
@@ -144,10 +144,8 @@ docs/                документация, ROADMAP, макет
 
 - [docs/README.md](docs/README.md) — карта документов для разработчиков.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — что сделано и что дальше.
-- [docs/mockup.md](docs/mockup.md) — согласованный макет; интерактивный макет —
-  <https://claude.ai/artifact/5m3u3Mtq5j9djAuvVpMiZp>.
+- [docs/mockup.md](docs/mockup.md) — согласованный макет.
 - [docs/infrastructure.md](docs/infrastructure.md) — инфраструктура разработки и принятые решения.
-- [AGENTS.md](AGENTS.md) — правила для ИИ-агентов.
 
 ## Лицензия
 

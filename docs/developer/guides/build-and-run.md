@@ -37,8 +37,7 @@ dotnet watch run -f net10.0                           # пересборка и 
 `PDFLIBRARY_DATA` — ею пользуются тесты и стенд экранов.
 
 Программа однооконная и одна на папку данных (`instance.lock`): второй запуск отдает сигнал
-первому (`show.signal`) и закрывается. Запущенную программу пользователя агент не закрывает и
-закрыть не просит.
+первому (`show.signal`) и закрывается.
 
 ## Два таргета и почему их два
 
@@ -143,10 +142,8 @@ Scripts/macos-build.sh osx-arm64 Release 1.2.3  # с номером версии
 | `packages/` | локальный кеш NuGet (`nuget.config`) | нет |
 | `dist/` | готовые сборки для раздачи, `Version <X.Y.Z>/<rid>/` | нет |
 | `.localdata/` | данные отладочного запуска: `library.db`, `library-cache.db`, `thumbs/`, `logs.db`, `instance.lock`, `show.signal`, `crash.log` | нет |
-| `.claude/worktrees/`, `.agents/worktrees/` | рабочие папки ИИ-агентов — см. [AGENTS.md](../../../AGENTS.md) | нет |
 
-Очистить сборку — удалить `artifacts/` и `packages/`. `.localdata/` и рабочие папки агентов при
-этом не трогают.
+Очистить сборку — удалить `artifacts/` и `packages/`. `.localdata/` при этом не трогают.
 
 ## Иконки
 
@@ -166,8 +163,6 @@ Pillow, как это сделано для временной иконки.
 | `linux-install.sh` | иконка и пункт меню на Linux-машине для уже разложенного бинаря |
 | `generate-icons.sh` | проверка мастеров иконки и сборка `icon.ico` и `icon.icns` (только macOS) |
 | `draw-icon.py` | рисует временные мастера иконки |
-| `worktree.sh` | рабочие папки ИИ-агентов: `check`, `new`, `sync`, `merge`, `remove` — см. [AGENTS.md](../../../AGENTS.md) |
-| `cloud-session.sh` | хук `SessionStart` облачных сессий Claude Code: автор коммитов — пользователь, подпись выключена, .NET SDK ставится пакетом ОС |
 
 ## Связанные документы
 

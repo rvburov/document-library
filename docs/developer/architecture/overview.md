@@ -3,7 +3,7 @@
 ## Назначение
 
 Карта программы для разработчика: слои, запуск, потоки, данные. Подробности по разделам — в
-[features/](../features/), правила кода — в [AGENTS.md](../../../AGENTS.md).
+[features/](../features/), правила кода — в [developer-guide.md](../guides/developer-guide.md).
 
 ## Слои
 

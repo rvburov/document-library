@@ -75,8 +75,3 @@ logs/
 # ===== Тестовые базы (не коммитить) =====
 # Тестовые PDF собираются в самих тестах.
 Tests/*.db
-
-# Рабочие папки агентов (git worktree, см. AGENTS.md): Claude Code — .claude/worktrees,
-# остальные ИИ — .agents/worktrees (Scripts/worktree.sh). В репозиторий они попасть не должны.
-.claude/worktrees/
-.agents/worktrees/

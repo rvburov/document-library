@@ -6,8 +6,8 @@ EF Core/SQLite с FTS5). Документация — для разработч�
 вопрос 3).
 
 Планы развития — [ROADMAP.md](ROADMAP.md). Согласованный макет — [mockup.md](mockup.md),
-инфраструктура разработки и принятые решения — [infrastructure.md](infrastructure.md). Правила для
-ИИ-агентов — [AGENTS.md](../AGENTS.md).
+инфраструктура разработки и принятые решения — [infrastructure.md](infrastructure.md). Правила
+кода — [developer-guide.md](developer/guides/developer-guide.md).
 
 ---
 
@@ -32,12 +32,12 @@ EF Core/SQLite с FTS5). Документация — для разработч�
 ### Руководства ([developer/guides/](developer/guides/))
 
 - [developer-guide.md](developer/guides/developer-guide.md) — требования, данные при разработке,
-  миграции EF, правила, которые держат тесты, диагностика сбоев.
+  миграции EF, правила кода и правила, которые держат тесты, диагностика сбоев.
 - [build-and-run.md](developer/guides/build-and-run.md) — запуск, два таргета, сборка
   дистрибутивов под три ОС, раскладка вывода, скрипты.
 - [install-and-update.md](developer/guides/install-and-update.md) — установка без прав
   администратора, удаление, обновление из папки обновлений.
-- [agent-tests.md](developer/guides/agent-tests.md) — проверка веток ИИ-агентов и PR на GitHub.
+- [branch-tests.md](developer/guides/branch-tests.md) — проверка каждой ветки и PR на GitHub.
 - [ci.md](developer/guides/ci.md) — полная проверка на четырех ОС по команде `git push actions`.
 - [release.md](developer/guides/release.md) — выпуск релиза на GitHub по тегу.
 
