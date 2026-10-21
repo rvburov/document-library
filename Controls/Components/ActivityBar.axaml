@@ -1,0 +1,133 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PdfLibrary.Controls.Components.ActivityBar"
+             Width="48"
+             Background="{DynamicResource BrushSecondaryBg}">
+
+    <!-- Панель разделов: кнопка боковой панели и «Библиотека» сверху,
+         «Настройки» снизу, над ними кольцо фонового чтения. -->
+    <DockPanel LastChildFill="False">
+
+    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="8,12,8,0">
+
+        <!-- Кнопка сайдбара: panel-left-open (закрыт) / panel-right-open (открыт) -->
+        <ToggleButton x:Name="SidebarBtn" Classes="icon"
+                      Width="32" Height="32"
+                      HorizontalAlignment="Center"
+                      CornerRadius="{StaticResource RadiusMedium}"
+                      ToolTip.Tip="Сайдбар">
+            <Viewbox Width="{StaticResource IconSizeXLarge}" Height="{StaticResource IconSizeXLarge}">
+                <Canvas Width="24" Height="24">
+                    <!-- panel-left-open: сайдбар закрыт (стрелка →) -->
+                    <Path x:Name="PanelOpenIcon"
+                          Data="{StaticResource IconPanelOpen}"
+                          Stroke="{Binding $parent[ToggleButton].Foreground}"
+                          StrokeThickness="{StaticResource IconStrokeXLargeBold}"
+                          StrokeLineCap="Round" StrokeJoin="Round" />
+                    <!-- panel-right-open: сайдбар открыт (стрелка ←) -->
+                    <Path x:Name="PanelCloseIcon"
+                          IsVisible="False"
+                          Data="{StaticResource IconPanelClose}"
+                          Stroke="{Binding $parent[ToggleButton].Foreground}"
+                          StrokeThickness="{StaticResource IconStrokeXLargeBold}"
+                          StrokeLineCap="Round" StrokeJoin="Round" />
+                </Canvas>
+            </Viewbox>
+        </ToggleButton>
+
+        <!-- Короткий разделитель на высоте линии сайдбара (Y=56):
+             12 (панель) + 32 (бургер) + 8 (Spacing) + 4 = 56 -->
+        <Border Classes="separator h" Margin="0,4" />
+
+        <!-- Модуль: Библиотека документов -->
+        <ToggleButton x:Name="LibraryBtn" Classes="icon module"
+                      Width="32" Height="32"
+                      HorizontalAlignment="Center"
+                      CornerRadius="{StaticResource RadiusMedium}"
+                      ToolTip.Tip="Библиотека">
+            <Viewbox Width="{StaticResource IconSizeXLarge}" Height="{StaticResource IconSizeXLarge}">
+                <Canvas Width="24" Height="24">
+                    <!-- lucide book-open-text -->
+                    <Path Data="{StaticResource IconBookOpenText}"
+                          Stroke="{Binding $parent[ToggleButton].Foreground}"
+                          StrokeThickness="{StaticResource IconStrokeXLargeBold}"
+                          StrokeLineCap="Round"
+                          StrokeJoin="Round" />
+                </Canvas>
+            </Viewbox>
+        </ToggleButton>
+
+    </StackPanel>
+
+    <!-- Модуль: Настройки — закреплен внизу панели -->
+    <ToggleButton x:Name="SettingsBtn" Classes="icon module"
+                  DockPanel.Dock="Bottom"
+                  Width="32" Height="32"
+                  Margin="8,0,8,12"
+                  HorizontalAlignment="Center"
+                  CornerRadius="{StaticResource RadiusMedium}"
+                  ToolTip.Tip="Настройки">
+        <Viewbox Width="{StaticResource IconSizeXLarge}" Height="{StaticResource IconSizeXLarge}">
+            <Canvas Width="24" Height="24">
+                <!-- lucide settings -->
+                <Path Data="{StaticResource IconSettings}"
+                      Stroke="{Binding $parent[ToggleButton].Foreground}"
+                      StrokeThickness="{StaticResource IconStrokeXLargeBold}"
+                      StrokeLineCap="Round"
+                      StrokeJoin="Round" />
+            </Canvas>
+        </Viewbox>
+    </ToggleButton>
+
+    <!-- Фоновое чтение — НАД настройками (второй Bottom-элемент DockPanel ложится выше первого).
+         Виден, только пока что-то идет; работ нет — кнопки нет вовсе.
+
+         Цветом здесь показано НЕ состояние, а ход: кольцо акцентного синего заполняется по мере
+         готовности. Красный не годится — в приложении он значит «сломалось», и здоровая работа,
+         запущенная человеком, читалась бы как авария; заодно тогда нечем было бы показать
+         настоящий сбой. Поэтому красный оставлен ровно для сбоя: кольцо краснеет и появляется
+         красная точка. Зеленый тоже занят — он значит «готово», а идущая работа еще не готова. -->
+    <Button x:Name="WorkBtn" Classes="icon"
+            DockPanel.Dock="Bottom"
+            IsVisible="False"
+            Width="32" Height="32"
+            Margin="8,0,8,8"
+            HorizontalAlignment="Center"
+            CornerRadius="{StaticResource RadiusMedium}"
+            ToolTip.Tip="Чтение документов">
+        <Panel Width="32" Height="32">
+            <!-- Дорожка и заполненная дуга: два круга, доля задается штриховкой. Отдельной
+                 фигуры-дуги не заводим — пересчитывать геометрию на каждый процент дороже. -->
+            <Ellipse x:Name="WorkTrack"
+                     Width="29" Height="29"
+                     Stroke="{DynamicResource BrushSeparator}"
+                     StrokeThickness="2" />
+            <Ellipse x:Name="WorkArc"
+                     Width="29" Height="29"
+                     Stroke="{DynamicResource BrushAccent}"
+                     StrokeThickness="2"
+                     StrokeLineCap="Round"
+                     RenderTransform="rotate(-90deg)" />
+            <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                    <Path Data="{StaticResource IconFileText}"
+                          Stroke="{DynamicResource BrushSecondaryText}"
+                          StrokeThickness="{StaticResource IconStrokeMedium}"
+                          StrokeLineCap="Round" StrokeJoin="Round" />
+                </Canvas>
+            </Viewbox>
+            <!-- Точка сбоя: единственное красное место значка -->
+            <Ellipse x:Name="WorkFailedDot"
+                     IsVisible="False"
+                     Width="8" Height="8"
+                     HorizontalAlignment="Right" VerticalAlignment="Top"
+                     Fill="{DynamicResource BrushRed}"
+                     Stroke="{DynamicResource BrushSecondaryBg}"
+                     StrokeThickness="1.5" />
+        </Panel>
+    </Button>
+
+    </DockPanel>
+
+</UserControl>

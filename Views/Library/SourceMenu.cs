@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using PdfLibrary.Controls.Components;
 using PdfLibrary.Services;
 using PdfLibrary.Views.Dialogs;
 
@@ -22,33 +23,34 @@ public static class SourceMenu
         var menu = new ContextMenu();
         if (library.Source(sourceId) is not { } source) return menu;
 
-        var check = new MenuItem { Header = "Проверить сейчас" };
+        var check = new MenuItem { Header = MenuIcons.Header("IconRefresh", "Проверить сейчас") };
         check.Click += (_, _) => library.Check(sourceId);
 
-        var rename = new MenuItem { Header = "Переименовать" };
+        var rename = new MenuItem { Header = MenuIcons.Header("IconPencil", "Переименовать") };
         rename.Click += async (_, _) => await RenameAsync(owner, library, sourceId);
 
-        var move = new MenuItem { Header = "Перенести в группу" };
-        var noGroup = new MenuItem { Header = "Без группы", IsEnabled = source.GroupId is not null };
+        var move = new MenuItem { Header = MenuIcons.Header("IconFolderTree", "Перенести в группу") };
+        var noGroup = new MenuItem { Header = MenuIcons.ChoiceHeader("Без группы", source.GroupId is null) };
         noGroup.Click += (_, _) => library.SetSourceGroup(sourceId, null);
         var targets = new List<MenuItem> { noGroup };
         foreach (var group in library.Groups)
         {
-            var item = new MenuItem { Header = group.Name, IsEnabled = source.GroupId != group.Id };
+            var item = new MenuItem { Header = MenuIcons.ChoiceHeader(group.Name, source.GroupId == group.Id) };
             var id = group.Id;
             item.Click += (_, _) => library.SetSourceGroup(sourceId, id);
             targets.Add(item);
         }
         move.ItemsSource = targets;
         move.IsEnabled = library.Groups.Count > 0;
+        MenuIcons.FixSubmenuGap(move);
 
-        var show = new MenuItem { Header = ShowInFolderText };
+        var show = new MenuItem { Header = MenuIcons.Header("IconFolder", ShowInFolderText) };
         show.Click += (_, _) =>
         {
             if (DocActions.ShowInFolder(source.Path) is { } error) MainWindow.NoticeOf(owner, error, isError: true);
         };
 
-        var remove = new MenuItem { Header = "Убрать из библиотеки" };
+        var remove = new MenuItem { Header = MenuIcons.DeleteHeader("Убрать из библиотеки") };
         remove.Click += async (_, _) => await RemoveAsync(owner, library, sourceId);
 
         menu.ItemsSource = new object[] { check, rename, move, show, new Separator(), remove };

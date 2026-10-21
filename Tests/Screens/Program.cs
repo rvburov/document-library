@@ -25,8 +25,9 @@ using PdfLibrary.Services;
 using PdfLibrary.Tests.Screens;
 using PdfLibrary.Utils;
 using PdfLibrary.Views;
+using Avalonia.Controls.Primitives;
+using PdfLibrary.Controls.Components;
 using PdfLibrary.Views.Library;
-using PdfLibrary.Views.Reader;
 using PdfLibrary.Views.Settings;
 
 var data = Path.Combine(Path.GetTempPath(), "pl-screens-" + Guid.NewGuid().ToString("N")[..8]);
@@ -99,13 +100,19 @@ try
     Pump(TimeSpan.FromMilliseconds(800));
 
     Console.WriteLine("Лента");
-    var feed = Find<FeedView>(window)!;
-    var vm = (LibraryViewModel)feed.DataContext!;
+    var feed = Find<LibraryView>(window)!;
+    var vm = feed.Vm!;
     Check(feed.IsVisible, "лента показана после «Открыть библиотеку»");
     Check(vm.Cards.Count == 9, $"в ленте 9 карточек (есть {vm.Cards.Count})");
-    Check(vm.Subtitle.StartsWith("9 документов · 3 источника"), $"подзаголовок: {vm.Subtitle}");
+    Check(Texts(window).Contains("Библиотека PDF"), "заголовок раздела в навбаре");
     Check(vm.SourceRows.Any(r => r.IsGroup && r.Name == "Насосная станция"), "группа в боковой панели");
     Check(vm.TagRows.Count == 3, "три метки в боковой панели");
+    var sidebar = Find<LibrarySidebar>(window)!;
+    Check(Texts(sidebar).Contains("Метки") && Texts(sidebar).Contains("Действующий"), "узел «Метки» с метками в боковой панели");
+    Check(Find<ActivityBar>(window)?.Bounds.Width == 48, "панель разделов шириной 48");
+    var grips = window.GetVisualDescendants().OfType<Border>()
+        .Count(b => b.IsEffectivelyVisible && b.Cursor?.ToString() == "SizeWestEast");
+    Check(grips == 1, $"ручка ширины боковой панели видна (ручек {grips})");
     Pump(TimeSpan.FromSeconds(2));   // миниатюры
     Shot(window, "03-feed");
 
@@ -121,13 +128,18 @@ try
     vm.Cards[0].IsSelected = true;
     vm.Cards[1].IsSelected = true;
     Pump(TimeSpan.FromMilliseconds(300));
-    Check(vm.SelectedText == "Выбрано 2", "панель действий с выбранными");
+    Check(vm.SelectedText == "Выбрано 2" && Texts(feed).Contains("Выбрано 2"), "панель действий с выбранными");
     Shot(window, "05-feed-selection");
     vm.ClearSelection();
 
     Console.WriteLine("Тип документа и метки");
     var drawings = vm.TypeRows.FirstOrDefault(t => t.Name == DocTypes.Drawing);
     Check(drawings is not null, "тип «Чертеж» в фильтре");
+    vm.SetTypes(new HashSet<string> { DocTypes.Drawing });
+    Pump(TimeSpan.FromMilliseconds(300));
+    Check(vm.Cards.Count > 0 && vm.Cards.All(c => c.Doc.DocType == DocTypes.Drawing), "фильтр «Тип документа»");
+    Check(vm.TypeLabel == "Тип документа: 1", $"подпись фильтра: {vm.TypeLabel}");
+    vm.SetTypes(null);
     vm.ClearSearch();
     Until(() => vm.AppliedQuery.Length == 0, "сброс поиска", TimeSpan.FromSeconds(5));
     vm.PickTag(vm.TagRows.First(t => t.Name == "Действующий"));
@@ -142,33 +154,52 @@ try
     Until(() => vm.AppliedQuery.Length > 0, "поиск", TimeSpan.FromSeconds(10));
     var manual = vm.Cards.First(c => c.Doc.FileName == "ЦНС-38-44_РЭ.pdf");
     feed.RequestRead(manual);
-    var reader = Find<ReaderScreen>(window)!;
-    Until(() => reader.Reader?.IsOpen == true && reader.Reader.Hits.Count > 0 && !reader.Reader.Counting,
-          "открытие документа и поиск по нему", TimeSpan.FromSeconds(30));
-    Pump(TimeSpan.FromSeconds(2));   // страницы и миниатюры страниц
+    var reader = Find<DocReaderView>(window)!;
+    Until(() => reader.Document == manual.Doc && reader.PagesScanned && reader.CounterText.Contains(" из "),
+          "открытие документа и поиск по его страницам", TimeSpan.FromSeconds(30));
+    Pump(TimeSpan.FromSeconds(2));   // картинки страниц
     Check(reader.IsVisible, "панель чтения показана");
-    Check(reader.Reader!.PageCount == 8, $"8 страниц (есть {reader.Reader.PageCount})");
-    Check(reader.Reader.Counter.Contains(" из "), $"счетчик совпадений: {reader.Reader.Counter}");
-    Check(reader.Reader.StatusRight.StartsWith("Текстовый слой есть · A4 × 8"), $"строка состояния: {reader.Reader.StatusRight}");
+    Check(reader.PageCount == 8, $"8 страниц (есть {reader.PageCount})");
+    Check(reader.StateText.Length == 0, $"на месте страниц нет надписи: {reader.StateText}");
+    Check(!reader.GetVisualDescendants().OfType<ToggleButton>().Any(b => Equals(b.Content, "Текст")),
+          "режима «Текст» нет — только страницы");
+    Check(reader.CurrentMatch == 0, $"текущее совпадение — первое: {reader.CounterText}");
+    grips = window.GetVisualDescendants().OfType<Border>()
+        .Count(b => b.IsEffectivelyVisible && b.Cursor?.ToString() == "SizeWestEast");
+    Check(grips == 2, $"ручки ширины у боковой панели и у панели чтения (ручек {grips})");
     Shot(window, "06-reader");
     // F3 и Shift+F3 — клавишами в окно, как нажал бы человек: переход идет через обработчик окна.
     window.KeyPress(Key.F3, RawInputModifiers.None, PhysicalKey.F3, null);
-    Pump(TimeSpan.FromMilliseconds(300));
-    Check(reader.Reader.CurrentHit == 1, $"F3 — следующее совпадение: {reader.Reader.Counter}");
+    Pump(TimeSpan.FromSeconds(1));
+    Check(reader.CurrentMatch == 1, $"F3 — следующее совпадение: {reader.CounterText}");
     window.KeyPress(Key.F3, RawInputModifiers.Shift, PhysicalKey.F3, null);
     Pump(TimeSpan.FromMilliseconds(300));
-    Check(reader.Reader.CurrentHit == 0, $"Shift+F3 — предыдущее совпадение: {reader.Reader.Counter}");
+    Check(reader.CurrentMatch == 0, $"Shift+F3 — предыдущее совпадение: {reader.CounterText}");
     window.KeyPress(Key.F3, RawInputModifiers.None, PhysicalKey.F3, null);
     Pump(TimeSpan.FromSeconds(1));
     Shot(window, "07-reader-next-hit");
 
+    // Скан без текстового слоя: страницы есть, искать на них нечего — строка над листами
+    // говорит об этом, а не оставляет человека с пустым счетчиком.
+    vm.ClearSearch();
+    Until(() => vm.AppliedQuery.Length == 0, "сброс поиска", TimeSpan.FromSeconds(5));
+    var scan = vm.Cards.FirstOrDefault(c => c.Doc.TextState == DocTextState.NoText);
+    if (scan is not null)
+    {
+        feed.RequestRead(scan);
+        Until(() => reader.Document == scan.Doc && reader.PageCount > 0, "открытие скана", TimeSpan.FromSeconds(30));
+        Pump(TimeSpan.FromMilliseconds(500));
+        Check(reader.NoteText.Contains("Скан без текстового слоя"), $"у скана строка про текстовый слой: {reader.NoteText}");
+    }
+    else Check(false, "скан в ленте");
+
     var drawing = vm.Cards.FirstOrDefault(c => c.Doc.FileName == "АБВГ.301122.001 ВО.pdf");
     if (drawing is not null)
     {
-        reader.Open(drawing);
-        Until(() => reader.Reader.IsOpen && reader.Reader.Doc == drawing.Doc, "открытие чертежа", TimeSpan.FromSeconds(30));
+        feed.RequestRead(drawing);
+        Until(() => reader.Document == drawing.Doc && reader.PageCount > 0, "открытие чертежа", TimeSpan.FromSeconds(30));
         Pump(TimeSpan.FromSeconds(2));
-        Check(reader.Reader.Doc!.Sheets == "A1 × 1, A3 × 2", $"форматы чертежа: {reader.Reader.Doc.Sheets}");
+        Check(drawing.Doc.Sheets == "A1 × 1, A3 × 2", $"форматы чертежа: {drawing.Doc.Sheets}");
         Shot(window, "08-reader-drawing");
     }
 
@@ -176,33 +207,38 @@ try
     Click(window, null, "Настройки");
     Pump(TimeSpan.FromMilliseconds(500));
     var settings = Find<SettingsView>(window)!;
-    Check(settings.IsVisible, "настройки открыты");
-    var names = new[] { "Общее", "Источники и чтение", "Лента и карточки", "Оформление", "Диагностика", "О программе" };
-    for (var i = 0; i < names.Length; i++)
+    var sections = Find<SidebarList>(window)!;
+    Check(settings.IsVisible && sections.IsVisible, "настройки открыты, разделы — в боковой панели");
+    var keys = SettingsView.Categories.Select(c => c.Key).ToList();
+    for (var i = 0; i < keys.Count; i++)
     {
-        Click(settings, names[i]);
+        sections.Select(keys[i]);
         Pump(TimeSpan.FromMilliseconds(800));
         Shot(window, $"{09 + i:D2}-settings-{i + 1}");
-        if (names[i] == "Диагностика")
+        if (keys[i] == "diagnostics")
             Check(Texts(settings).Any(t => t.StartsWith("Журнал хранится в logs.db")), "диагностика читает журнал");
     }
+
+    Check(Math.Abs(Scaling.Current - 1) < 0.001, $"открытие настроек не меняет масштаб ({Scaling.Current:P0})");
+    Check(FontScale.Delta == 0, $"открытие настроек не меняет размер шрифта ({FontScale.Delta})");
 
     Console.WriteLine("Темная тема");
     AppSettings.Theme = AppTheme.Dark;
     ThemeManager.Apply(AppTheme.Dark);
-    Click(settings, "Оформление");
+    sections.Select("look");
     Pump(TimeSpan.FromMilliseconds(500));
     Shot(window, "15-settings-look-dark");
     Click(window, null, "Библиотека");
-    Pump(TimeSpan.FromMilliseconds(500));
-    var readerVisible = Find<ReaderScreen>(window)!.IsVisible;
-    Shot(window, readerVisible ? "16-reader-dark" : "16-feed-dark");
-    if (readerVisible)
-    {
-        Click(window, null, "Закрыть панель чтения");
-        Pump(TimeSpan.FromMilliseconds(800));
-        Shot(window, "17-feed-dark");
-    }
+    Pump(TimeSpan.FromMilliseconds(800));
+    Check(reader.IsVisible, "панель чтения осталась открытой после настроек");
+    Shot(window, "16-reader-dark");
+    // Кнопка навбара — переключатель: человек нажимает, и он снимает отметку.
+    var readerToggle = window.GetVisualDescendants().OfType<ToggleButton>()
+        .First(b => b.IsEffectivelyVisible && Equals(ToolTip.GetTip(b), "Закрыть панель чтения"));
+    readerToggle.IsChecked = false;
+    Pump(TimeSpan.FromMilliseconds(800));
+    Check(!reader.IsVisible, "панель чтения закрыта кнопкой навбара");
+    Shot(window, "17-feed-dark");
 
     window.Close();
     library.Dispose();

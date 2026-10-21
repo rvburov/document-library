@@ -1,26 +1,57 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!--
-      Шрифт и размеры — токены макета. Размеры переписывает Utils/FontScale (настройка «Размер
-      шрифта»), поэтому потребители берут их через DynamicResource.
-    -->
-    <FontFamily x:Key="FontFamilyBase">fonts:Inter#Inter, $Default</FontFamily>
+    <Styles.Resources>
+        <!-- Семейство шрифтов: единый токен на все приложение -->
+        <FontFamily x:Key="FontFamilyBase">Helvetica Neue, Arial, sans-serif</FontFamily>
 
-    <!-- Подписи и мелкий текст: строка пути, мета, чипы, заголовки секций -->
-    <sys:Double x:Key="FontSizeSmall">11</sys:Double>
-    <!-- Основной текст -->
-    <sys:Double x:Key="FontSizeBase">13</sys:Double>
-    <!-- Заголовок диалога -->
-    <sys:Double x:Key="FontSizeMedium">16</sys:Double>
-    <!-- Заголовок панели чтения -->
-    <sys:Double x:Key="FontSizeLargeReader">18</sys:Double>
-    <!-- Заголовок навбара и экрана настроек -->
-    <sys:Double x:Key="FontSizeLarge">20</sys:Double>
-    <!-- Заголовок экрана первого запуска -->
-    <sys:Double x:Key="FontSizeHero">28</sys:Double>
+        <!-- Размеры шрифтов -->
+        
+        <!-- вторичный/мелкий текст: описания настроек, футеры, подписи под
+             основным, строки журнала -->
+        <x:Double x:Key="FontSizeSmall">10</x:Double>
+        <!-- ОСНОВНОЙ размер: дефолт всего текста (TextBlock/TextBox/Button),
+             карточки ленты, строки списков, диалоги -->
+        <x:Double x:Key="FontSizeBase">12</x:Double>
+        <!-- промежуточный: заголовки внутри страницы (заголовок диалога, крупная
+             карточка) — между телом и крупным заголовком страницы -->
+        <x:Double x:Key="FontSizeMedium">16</x:Double>
+        <!-- крупные заголовки: названия в навбарах, заголовок раздела
+             сайдбара, заголовок страницы настроек -->
+        <x:Double x:Key="FontSizeLarge">20</x:Double>
 
-    <FontWeight x:Key="FontWeightBold">SemiBold</FontWeight>
+        <!-- ── Еще два размера ─────────────────────────────────────────────
+             Оба, как и остальные, двигает настройка «Размер шрифта».
 
-</ResourceDictionary>
+             H3 — подзаголовок между основным текстом и FontSizeMedium. -->
+        <x:Double x:Key="FontSizeH3">14</x:Double>
+        <!-- Моноширинный текст. На одном кегле с текстом он выглядит крупнее — у него выше
+             строчные. На размер меньше он садится на общую строку и перестает выпирать. -->
+        <x:Double x:Key="FontSizeMono">11</x:Double>
+
+        <!-- Веса шрифтов -->
+        <FontWeight x:Key="FontWeightNormal">Normal</FontWeight>
+        <FontWeight x:Key="FontWeightBold">SemiBold</FontWeight>
+    </Styles.Resources>
+
+    <!-- TextBlock = просто надпись/текст, который НЕ редактируется (заголовки,
+         подписи, названия документов, текст в строках) -->
+    <Style Selector="TextBlock">
+        <Setter Property="FontFamily"  Value="{StaticResource FontFamilyBase}" />
+        <Setter Property="FontSize"    Value="{DynamicResource FontSizeBase}" />
+        <Setter Property="Foreground"  Value="{DynamicResource BrushPrimaryText}" />
+    </Style>
+
+    <!-- TextBox = поле ВВОДА (туда печатают: поиск, имя метки, путь к папке) -->
+    <Style Selector="TextBox">
+        <Setter Property="FontFamily"  Value="{StaticResource FontFamilyBase}" />
+        <Setter Property="FontSize"    Value="{DynamicResource FontSizeBase}" />
+    </Style>
+
+    <!-- Button = кнопка («Сегодня», «Сохранить», «Отмена») -->
+    <Style Selector="Button">
+        <Setter Property="FontFamily"  Value="{StaticResource FontFamilyBase}" />
+        <Setter Property="FontSize"    Value="{DynamicResource FontSizeBase}" />
+    </Style>
+
+</Styles>

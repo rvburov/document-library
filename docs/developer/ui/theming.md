@@ -2,73 +2,102 @@
 
 ## Назначение
 
-Интерфейс собирается только из готовых токенов и тем контролов — цвета, шрифты, размеры, линии,
-иконки, виды кнопок. Новое — по образцу соседнего. Так светлая и темная темы, масштаб и размер
-шрифта работают везде сами, без правок отдельных экранов. Токены — из согласованного макета
-([mockup.md](../../mockup.md)); имена — как в SmartBase, поэтому перенесенная разметка ложится на
-них без правки.
+Внешний вид программы задают общие стили (решение пользователя 21.10.2026, [mockup.md](../../mockup.md)):
+интерфейс собирается только из этих токенов и классов — цвета, шрифты, размеры, линии, иконки,
+виды кнопок. Новое — по образцу соседнего, а не своей версией. У программы две темы, светлая и
+темная, поэтому все кисти здесь — в словарях тем.
 
 ## Где в коде
 
 | Файл | Что |
 |---|---|
 | [Assets/Styles/Colors.axaml](../../../Assets/Styles/Colors.axaml) | цвета: словари `Light` и `Dark` (`ThemeDictionaries`) |
-| [Assets/Styles/Typography.axaml](../../../Assets/Styles/Typography.axaml) | шрифт Inter и размеры: `FontSizeSmall` 11, `FontSizeBase` 13, `FontSizeMedium` 16, `FontSizeLarge` 20, `FontSizeHero` 28 |
-| [Assets/Styles/Metrics.axaml](../../../Assets/Styles/Metrics.axaml) | высоты, ширины, скругления (`RadiusSmall` 6 … `RadiusPill` 15), линии-границы |
-| [Assets/Styles/Icons.axaml](../../../Assets/Styles/Icons.axaml) | иконки-геометрии для [Controls/Icon.cs](../../../Controls/Icon.cs) |
-| [Assets/Styles/Controls.axaml](../../../Assets/Styles/Controls.axaml) | темы контролов и классы: кнопки, переключатель, галочка, чипы, карточка, строки настроек |
+| [Assets/Styles/Typography.axaml](../../../Assets/Styles/Typography.axaml) | шрифт (Helvetica Neue, Arial; где их нет — встроенный Inter) и размеры: `FontSizeSmall` 10, `FontSizeBase` 12, `FontSizeH3` 14, `FontSizeMedium` 16, `FontSizeLarge` 20 |
+| [Assets/Styles/Icons.axaml](../../../Assets/Styles/Icons.axaml) | иконки-геометрии (сетка 24×24, обводка) и размеры `IconSizeSmall` 16 … `IconSizeXLarge` 32; в конце — свои: метка, папки, обновление |
+| [Assets/Styles/Controls.axaml](../../../Assets/Styles/Controls.axaml) | высоты и скругления, линии, темы контролов и классы: кнопки, полосы прокрутки, выпадашки, блок поиска, сегменты, ячейка с данными |
+| [Assets/Styles/WindowMetrics.axaml](../../../Assets/Styles/WindowMetrics.axaml) | ширины и отступы окон-диалогов |
+| [Assets/Styles/ComboBoxTheme.axaml](../../../Assets/Styles/ComboBoxTheme.axaml), [ZoomPopupThemes.axaml](../../../Assets/Styles/ZoomPopupThemes.axaml) | выпадашка «Список пуст»; меню и подсказки под зумом программы |
+| [Controls/Behaviors/](../../../Controls/Behaviors/) | `LineMetrics` (линия ровно в физический пиксель при любом зуме), `WindowZoom`, `RoundedClip`, `ScrollBarLink`, `TransientPopups`, `PopupPlate` |
+| [Controls/Components/](../../../Controls/Components/) | панель разделов, боковая панель ленты, список разделов настроек, навбар ленты, окно фильтра, заголовки пунктов меню |
+| [Views/Settings/SettingsView.axaml](../../../Views/Settings/SettingsView.axaml) | блоки настроек: свои стили раздела в `UserControl.Styles` |
 | [Utils/ThemeManager.cs](../../../Utils/ThemeManager.cs) | светлая, темная, как в системе |
-| [Utils/Scaling.cs](../../../Utils/Scaling.cs), [Utils/FontScale.cs](../../../Utils/FontScale.cs) | масштаб интерфейса 90–125 % и размер шрифта |
-| [Views/Res.cs](../../../Views/Res.cs) | ресурсы приложения из кода |
+| [Utils/Scaling.cs](../../../Utils/Scaling.cs), [Utils/FontScale.cs](../../../Utils/FontScale.cs) | уровень масштабирования и размер шрифта |
+| [Views/Res.cs](../../../Views/Res.cs) | ресурсы программы из кода |
 
 ## Как работает
+
+### Каркас окна
+
+Панель разделов 48 пикселей с иконками 32×32, тонкая линия справа от нее,
+боковая панель 220 пикселей (180–500, ручка ⋮ у правого края), раздел, правая колонка панели
+чтения со своей ручкой ⋮. Самая верхняя линия окна идет над всеми колонками (на macOS ее рисует
+система), вторая — на высоте навбара 56 пикселей через боковую панель, раздел и панель чтения.
+Линии — отдельные `Border.separator`, а не рамки контейнеров: отдельную линию `LineMetrics`
+защелкивает в целый физический пиксель, и она четкая при любом зуме.
 
 ### Цвета
 
 Все кисти — в словарях тем, потребители берут их через `DynamicResource`: смена темы в
-«Оформлении» перекрашивает окно на ходу. Основные токены: фоны `BrushBg`, `BrushSecondaryBg`,
-`BrushHover`; линии `BrushSeparator`, `BrushLineStrong`; текст `BrushPrimaryText`,
-`BrushSecondaryText`; акцент `BrushAccent`, `BrushAccentLight`; смысловые пары для чипов
-(`BrushRed`/`BrushRedLight`, `BrushGreen`…, `BrushOrange`…); найденное `BrushHighlight`; лист
-`BrushPage`. Подсветка на листах PDF (`BrushPageHit`, `BrushPageHitCurrent`,
-`BrushPageHitOutline`) одна на обе темы: листы белые всегда.
+«Оформлении» перекрашивает окно на ходу; `StaticResource` для кистей не годится — он не
+меняется вместе с темой. Основные токены: фоны
+`BrushBg`, `BrushSecondaryBg`, `BrushInactiveBg`, `BrushActivityBar`; линии `BrushSeparator`,
+`BrushLineStrong`; текст `BrushPrimaryText`, `BrushSecondaryText`; акцент `BrushAccent`,
+`BrushAccentLight`; пары для чипов (`BrushRed`/`BrushRedLight`, `BrushGreen`…, `BrushOrange`…);
+найденное `BrushHighlight`; плитка формата `BrushFormatPdf`/`BrushFormatPdfLight`. Подсветка на
+листах PDF одна на обе темы: листы белые всегда.
 
-### Кнопки
+Карточки ленты и строки боковой панели строятся кодом и берут кисти при постройке — окно
+пересобирает их по событию смены темы (`ActualThemeVariantChanged`).
 
-Вид кнопки — тема (`Theme="{StaticResource …}"`), а не набор свойств на месте: `PrimaryButton`
-(синяя, главное действие), `SecondaryButton`, `LinkButton` («Прочитать», «Открыть» на карточке),
-`BarButton`, `IconButton`, `PillButton`, `SegmentButton` (сегменты «Маленькая / Средняя /
-Большая»), `NavButton`, `ActivityButton`, `MenuButton`, `RowButton`. Все основаны на
-`ButtonCore`. Переключатель — тема `Switch` у `ToggleButton`.
+### Кнопки и классы
 
-### Классы разметки
+Вид кнопки — класс: `navbtn` (30×30, иконка — кнопки тулбаров и навбаров), `navdrop`
+(выпадашка-якорь «Тип документа»), `icon` (иконка без фона), `dialog` (кнопка диалога и
+настроек, ширина 110; `dialog auto` — по тексту), `accent` (синий фон), `modeseg` (сегменты
+настроек: размер карточки, масштаб, шрифт, фильтры журнала и списка папок). Блок поиска —
+`Border.searchBlock`, показанные данные — `Border.dataBox`, линия — `Border.separator` с `.h`
+или `.v`.
 
-Повторяющиеся элементы — классы стилей: `Border.card` и `.selected` (карточка ленты), `Border.chip`
-с `.type`, `.red`, `.orange`, `.gray`, `.green` (чипы карточки), `Border.group` и `Border.srow`
-(группа и строка экранов настроек), `Border.trow` (строка дерева источников), `Border.thumb`
-(миниатюра на рельсе панели чтения), `TextBlock.h2` (заголовок группы настроек).
+Иконка в разметке — `Viewbox` с `Canvas` 24×24 и `Path` с обводкой (`IconStrokeMedium`); цвет
+обводки берется у кнопки (`$parent[Button].Foreground`), поэтому иконка
+перекрашивается вместе с ней при наведении и в темной теме.
 
-Имя класса — общее пространство на всю программу: стиль `Border.srow` настроек однажды дал
-разделители строкам дерева источников, носившим то же имя. Новый класс — с проверкой, что имя
-свободно.
+### Всплывающие панели
+
+Окно фильтра «Тип документа» — `ColumnFilterPanel`: чеклист с поиском, счетчиками и
+«Готово». Каждая показанная панель отмечается в `TransientPopups`, и окно закрывает их при потере
+фокуса — иначе на macOS панель повисла бы над чужой программой (сторож —
+`TransientPopupsTests`). Контекстные меню — заголовки `MenuIcons` (обводочная иконка + текст,
+красный пункт удаления).
 
 ### Ресурсы из кода
 
-`this.FindResource` в конструкторе контрола до его входа в дерево возвращает `UnsetValue`, и
-приведение к теме кнопки падает. Код берет ресурсы приложения через `Res.Theme`, `Res.Icon`,
-`Res.Brush` — с учетом текущей темы.
+`this.FindResource` в конструкторе контрола до его входа в дерево возвращает `UnsetValue`. Код
+берет ресурсы программы через `Res.Brush` и `Res.Icon` — с учетом текущей темы. Карточка-пример
+в настройках строится тем же кодом, что карточка ленты (`DocListView.PreviewCard`), вне дерева —
+поэтому лента ищет ресурсы сперва по дереву, а не найдя — у программы.
 
 ### Масштаб и шрифт
 
 «Масштаб интерфейса» (90, 100, 110, 125 %) меняет размер всего окна; «Размер шрифта» (мелкий,
-стандартный, крупный) — только текст, карточки подстраиваются под него сами.
+стандартный, крупный — −1, 0, +2 пикселя от стандарта) — только текст, карточки подстраиваются
+сами. Оба — сегментами в разделе «Оформление», выбор применяется сразу; стенд экранов проверяет,
+что открытие настроек не меняет масштаб и шрифт. Значения из настроек, которых нет среди
+сегментов, программа принимает в пределах 70–130 % и −3…+3 (`Scaling`, `FontScale`).
+
+### Блоки настроек
+
+Каждый раздел настроек — заголовок раздела и блоки: серый заголовок блока заглавными
+(`TextBlock.h2`), под ним рамка `Border.group` со строками `Border.srow` (название, пояснение,
+справа — переключатель, сегменты или кнопка), между строками — линия. Стили блоков лежат в
+самой разметке настроек: больше их нигде нет.
 
 ## Проверено и не проверено
 
 Стенд экранов грузит все экраны в обеих темах: опечатка в ключе ресурса роняет его при загрузке,
-а не у пользователя. Кадры сверены с макетом глазами. Вид на настоящих мониторах с масштабом ОС
-150–200 % — по [manual-check.md](../qa-checklists/manual-check.md).
+а не у пользователя. Кадры сверены с макетом глазами. Вид на настоящих мониторах с
+масштабом ОС 150–200 % — по [manual-check.md](../qa-checklists/manual-check.md).
 
 ## Связанные документы
 
-[[../features/library]], [[../features/reader]], [[../../mockup]]
+[[../features/library]], [[../features/reader]], [[../../infrastructure]]

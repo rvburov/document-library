@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PdfLibrary.Controls.Widgets.NoticeBanner"
+             IsVisible="False">
+
+    <!-- ЕДИНЫЙ вид уведомления на все приложение: иконка-восклицание + рамка + светлая
+         подложка + текст в цвет рамки. Красный — ошибка (стандарт), синий (акцент) — сведение
+         (Kind=Info, кисти переключает код). Любая новая «плашка» (ошибка валидации, пояснение
+         в диалоге, карточка AppNotifications) делается ЭТИМ виджетом, а не своей версткой.
+         Цвета — только из палитры (Colors.axaml), размер текста — из Typography.axaml. -->
+    <Border x:Name="Frame"
+            Background="{DynamicResource BrushRedLight}"
+            BorderBrush="{DynamicResource BrushRed}"
+            BorderThickness="{DynamicResource BorderLine}"
+            CornerRadius="{StaticResource RadiusBase}"
+            Padding="10,7">
+        <!-- Иконка — своя колонка слева, по центру ВСЕЙ плашки (не по первой строке):
+             текст многострочный, и иконка стоит напротив его середины. -->
+        <Grid ColumnDefinitions="Auto,8,*">
+            <Viewbox Grid.Column="0" Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}"
+                     VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                    <Ellipse x:Name="IconCircle" Width="24" Height="24" Fill="{DynamicResource BrushRed}" />
+                    <Path Data="{StaticResource IconAlertMark}"
+                          Stroke="White" StrokeThickness="2"
+                          StrokeLineCap="Round" />
+                </Canvas>
+            </Viewbox>
+            <TextBlock Grid.Column="2" x:Name="MessageText"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrushRed}" />
+        </Grid>
+    </Border>
+</UserControl>

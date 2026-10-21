@@ -1,6 +1,6 @@
 namespace PdfLibrary.Tests.Integration;
 
-/// <summary>Одноразовая временная папка для файловых фикстур (CSV/XLSX/JSON, экспорт).
+/// <summary>Одноразовая временная папка для файловых фикстур (PDF, журнал, кеш).
 /// Рекурсивно удаляется при <see cref="Dispose"/>.</summary>
 public sealed class TempDir : IDisposable
 {

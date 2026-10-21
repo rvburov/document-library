@@ -14,15 +14,13 @@ public sealed partial class SourceRow : ObservableObject
 {
     public int Id { get; init; }
     public bool IsGroup { get; init; }
-    public bool IsSource => !IsGroup;
     public string Name { get; init; } = "";
-    public string CountText { get; init; } = "";
-    /// <summary>Отступ слева: источник в группе глубже, чем источник сам по себе.</summary>
-    public double Indent { get; init; }
+    /// <summary>Уровень в дереве: источник в группе — 1, группа и источник сам по себе — 0.</summary>
+    public int Depth { get; init; }
     public bool Expanded { get; init; }
-    public double ChevronAngle => Expanded ? 90 : 0;
-    public string ChevronLabel => Expanded ? "Свернуть группу" : "Развернуть группу";
-    /// <summary>Папка недоступна — имя приглушено, число заменено пометкой.</summary>
+    /// <summary>Строка статуса под именем: «читаю…», «недоступна»; пусто — статуса нет.</summary>
+    public string Status { get; init; } = "";
+    /// <summary>Папка недоступна — статус красный.</summary>
     public bool Unavailable { get; init; }
 
     [ObservableProperty] private bool _isChecked;
@@ -75,7 +73,8 @@ public sealed partial class LibraryViewModel : ObservableObject
         _library.Changed += OnLibraryChanged;
         _library.ReadingChanged += _ => UpdateStatus();
         AppSettings.Changed += OnSettingChanged;
-        FontScale.Changed += () => OnPropertyChanged(nameof(Metrics));
+        // Шрифт крупнее — карточки собираются заново: высота карточки зависит от шрифта.
+        FontScale.Changed += () => { OnPropertyChanged(nameof(Shape)); CardsRebuildRequested?.Invoke(); };
         RebuildSidebar();
         RebuildFeed();
     }
@@ -104,18 +103,6 @@ public sealed partial class LibraryViewModel : ObservableObject
     [ObservableProperty] private int? _tagFilter;
 
     public bool AllGroupsExpanded => _library.Groups.Count > 0 && _library.Groups.All(g => g.Expanded);
-    public string ExpandLabel => AllGroupsExpanded ? "Свернуть группы" : "Развернуть группы";
-
-    /// <summary>«4 251 документ · 3 источника».</summary>
-    public string Subtitle
-    {
-        get
-        {
-            var docs = _library.Documents.Count(d => !d.Missing);
-            var sources = _library.Sources.Count;
-            return $"{docs:N0} {Plural.Documents(docs)} · {sources} {Plural.Of(sources, "источник", "источника", "источников")}";
-        }
-    }
 
     public string SourceName(int id) => PreviewSource ?? _library.Source(id)?.Name ?? "";
 
@@ -127,16 +114,15 @@ public sealed partial class LibraryViewModel : ObservableObject
             var members = _library.Sources.Where(s => s.GroupId == group.Id).OrderBy(s => s.Position).ToList();
             SourceRows.Add(new SourceRow
             {
-                Id = group.Id, IsGroup = true, Name = group.Name, Expanded = group.Expanded, Indent = 2,
-                CountText = members.Sum(s => s.Count).ToString("N0"),
+                Id = group.Id, IsGroup = true, Name = group.Name, Expanded = group.Expanded,
                 IsChecked = members.Count > 0 && members.All(s => s.Shown),
             });
             if (group.Expanded)
-                foreach (var source in members) SourceRows.Add(RowOf(source, 46));
+                foreach (var source in members) SourceRows.Add(RowOf(source, 1));
         }
         foreach (var source in _library.Sources.Where(s => s.GroupId is null || _library.Groups.All(g => g.Id != s.GroupId))
                                                .OrderBy(s => s.Position).ThenBy(s => s.Id))
-            SourceRows.Add(RowOf(source, 24));
+            SourceRows.Add(RowOf(source, 0));
 
         TagRows.Clear();
         foreach (var tag in _library.Tags.OrderBy(t => t.Position).ThenBy(t => t.Id))
@@ -145,20 +131,15 @@ public sealed partial class LibraryViewModel : ObservableObject
             TagRows.Add(new TagRow(tag.Id, tag.Name, BrushOf(tag.Color), count.ToString("N0"), TagFilter == tag.Id));
         }
 
-        OnPropertyChanged(nameof(Subtitle));
-        OnPropertyChanged(nameof(ExpandLabel));
-        OnPropertyChanged(nameof(HasTags));
     }
 
-    public bool HasTags => _library.Tags.Count > 0;
-
-    private static SourceRow RowOf(SourceItem source, double indent) => new()
+    private static SourceRow RowOf(SourceItem source, int depth) => new()
     {
-        Id = source.Id, Name = source.Name, Indent = indent, IsChecked = source.Shown,
+        Id = source.Id, Name = source.Name, Depth = depth, IsChecked = source.Shown,
         Unavailable = source.UnavailableSince is not null,
-        CountText = source.FirstScan ? "читаю…"
-                  : source.UnavailableSince is not null ? "нет связи"
-                  : source.Count.ToString("N0"),
+        Status = source.UnavailableSince is not null ? "недоступна — документы сохранены"
+               : source.FirstScan ? "читаю папку…"
+               : "",
     };
 
     /// <summary>Галочка строки дерева: источник — сам, группа — все ее источники.</summary>
@@ -180,6 +161,16 @@ public sealed partial class LibraryViewModel : ObservableObject
     {
         var expand = !AllGroupsExpanded;
         foreach (var group in _library.Groups.ToList()) _library.SetGroupExpanded(group.Id, expand);
+    }
+
+    /// <summary>Все источники отмечены — кнопка «Включить все» выключает.</summary>
+    public bool AllSourcesShown => _library.Sources.Count > 0 && _library.Sources.All(s => s.Shown);
+
+    /// <summary>«Включить все» / «Выключить все» в шапке боковой панели.</summary>
+    public void ToggleAllShown()
+    {
+        if (_library.Sources.Count == 0) return;
+        _library.SetShown(_library.Sources.Select(s => s.Id).ToList(), !AllSourcesShown);
     }
 
     public void PickTag(TagRow row)
@@ -212,8 +203,6 @@ public sealed partial class LibraryViewModel : ObservableObject
         RebuildFeed();
     }
 
-    public IReadOnlyList<(string Key, string Label)> SortOptions => FeedSort.Options;
-
     public ObservableCollection<TypeRow> TypeRows { get; } = [];
 
     /// <summary>«Тип документа» или «Тип документа: 3», когда часть типов снята.</summary>
@@ -221,32 +210,24 @@ public sealed partial class LibraryViewModel : ObservableObject
         ? "Тип документа"
         : $"Тип документа: {TypeRows.Count(t => t.IsOn)}";
 
-    public bool TypeFilterActive => _hiddenTypes.Count > 0;
+    /// <summary>Отмеченные типы для окна фильтра; null — фильтр снят (все типы).</summary>
+    public IReadOnlySet<string>? ChosenTypes => _hiddenTypes.Count == 0
+        ? null
+        : TypeRows.Where(t => !_hiddenTypes.Contains(t.Name)).Select(t => t.Name).ToHashSet();
 
-    [ObservableProperty] private string _typeQuery = "";
+    /// <summary>Типы со счетчиками для окна фильтра — по ленте без учета самого типа.</summary>
+    public List<(string Value, int Count)> TypeCounts() => TypeRows.Select(t => (t.Name, t.Count)).ToList();
 
-    partial void OnTypeQueryChanged(string value) => OnPropertyChanged(nameof(VisibleTypeRows));
-
-    public IEnumerable<TypeRow> VisibleTypeRows =>
-        TypeQuery.Trim().Length == 0
-            ? TypeRows
-            : TypeRows.Where(t => t.Name.Contains(TypeQuery.Trim(), StringComparison.CurrentCultureIgnoreCase));
-
-    public bool AllTypesOn
+    /// <summary>
+    /// Итог окна «Тип документа»: <paramref name="chosen"/> — отмеченные типы, null — все.
+    /// Хранится снятое, а не отмеченное: новый тип, появившийся в ленте позже, виден сразу.
+    /// </summary>
+    public void SetTypes(IReadOnlySet<string>? chosen)
     {
-        get => _hiddenTypes.Count == 0;
-        set
-        {
-            _hiddenTypes.Clear();
-            if (!value) foreach (var t in TypeRows) _hiddenTypes.Add(t.Name);
-            foreach (var t in TypeRows) t.IsOn = value;
-            RebuildFeed();
-        }
-    }
-
-    public void SetType(TypeRow row, bool on)
-    {
-        if (on) _hiddenTypes.Remove(row.Name); else _hiddenTypes.Add(row.Name);
+        _hiddenTypes.Clear();
+        if (chosen is not null)
+            foreach (var t in TypeRows)
+                if (!chosen.Contains(t.Name)) _hiddenTypes.Add(t.Name);
         RebuildFeed();
     }
 
@@ -278,7 +259,7 @@ public sealed partial class LibraryViewModel : ObservableObject
         var cts = _searchCts = new CancellationTokenSource();
         try
         {
-            var outcome = await _library.SearchAsync(query, Metrics.SnippetWords, cts.Token);
+            var outcome = await _library.SearchAsync(query, Shape.SnippetWords, cts.Token);
             if (version != _searchVersion) return;
             _search = outcome;
             AppliedQuery = query;
@@ -350,11 +331,7 @@ public sealed partial class LibraryViewModel : ObservableObject
         RebuildTypes();
         UpdateStatus();
         UpdateSelection();
-        FeedRebuilt?.Invoke();
     }
-
-    /// <summary>Лента пересобрана — список панели чтения сверяет текущий документ.</summary>
-    public event Action? FeedRebuilt;
 
     private void RebuildTypes()
     {
@@ -368,9 +345,6 @@ public sealed partial class LibraryViewModel : ObservableObject
         foreach (var (type, count) in counts)
             TypeRows.Add(new TypeRow { Name = type, Count = count, IsOn = !_hiddenTypes.Contains(type) });
         OnPropertyChanged(nameof(TypeLabel));
-        OnPropertyChanged(nameof(TypeFilterActive));
-        OnPropertyChanged(nameof(AllTypesOn));
-        OnPropertyChanged(nameof(VisibleTypeRows));
     }
 
     // ── Строка состояния ──────────────────────────────────────────────────────
@@ -451,6 +425,25 @@ public sealed partial class LibraryViewModel : ObservableObject
         SelectedCount = _selected.Count;
     }
 
+    /// <summary>Клик по карточке без клавиш: выбрана только она.</summary>
+    public void SelectOnly(CardViewModel card)
+    {
+        foreach (var doc in _selected.ToList())
+            if (doc != card.Doc && _cardByDoc.TryGetValue(doc, out var other)) other.IsSelected = false;
+        _selected.RemoveWhere(d => d != card.Doc);
+        card.IsSelected = true;
+        SelectedCount = _selected.Count;
+    }
+
+    /// <summary>Ctrl+Shift+клик: выбрать карточки ленты от <paramref name="anchor"/> до <paramref name="card"/>.</summary>
+    public void SelectRange(CardViewModel anchor, CardViewModel card)
+    {
+        var a = Cards.ToList().IndexOf(anchor);
+        var b = Cards.ToList().IndexOf(card);
+        if (a < 0 || b < 0) { card.IsSelected = !card.IsSelected; return; }
+        for (var i = Math.Min(a, b); i <= Math.Max(a, b); i++) Cards[i].IsSelected = true;
+    }
+
     public void ClearSelection()
     {
         foreach (var doc in _selected.ToList())
@@ -469,16 +462,16 @@ public sealed partial class LibraryViewModel : ObservableObject
             IsOn = _selected.Count > 0 && _selected.All(d => d.Tags.Contains(t.Id)),
         }).ToList();
 
-    /// <summary>«Метки для 3 документов: галочка ставит метку всем выбранным».</summary>
-    public string TagMenuTitle =>
-        $"Метки для {SelectedCount} {Plural.Of(SelectedCount, "документа", "документов", "документов")}: " +
-        "галочка ставит метку всем выбранным";
 
     public void SetTagOnSelected(int tagId, bool on) => _library.SetTag(tagId, _selected.ToList(), on);
 
     // ── Настройки карточек ────────────────────────────────────────────────────
 
-    public CardMetrics Metrics { get; private set; } = CardMetrics.Medium;
+    /// <summary>Геометрия карточки по настройке «Размер карточки» — таблица <see cref="DocTiles"/>.</summary>
+    public DocTileShape Shape { get; private set; } = DocTiles.Of(CardSize.Medium);
+
+    /// <summary>Карточки надо собрать заново: сменился размер, шрифт, миниатюры или тема.</summary>
+    public event Action? CardsRebuildRequested;
     public bool ShowThumbnails { get; private set; } = true;
     public bool ShowPath { get; private set; } = true;
     public bool ShowMeta { get; private set; } = true;
@@ -486,7 +479,7 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     private void ReadMetrics()
     {
-        Metrics        = CardMetrics.Of(AppSettings.CardSize);
+        Shape          = DocTiles.Of(AppSettings.CardSize);
         ShowThumbnails = AppSettings.CardThumbnail;
         ShowPath       = AppSettings.CardPath;
         ShowMeta       = AppSettings.CardMeta;
@@ -503,8 +496,9 @@ public sealed partial class LibraryViewModel : ObservableObject
             case AppSettings.KeyCardMeta:
             case AppSettings.KeyCardType:
                 ReadMetrics();
-                OnPropertyChanged(nameof(Metrics));
+                OnPropertyChanged(nameof(Shape));
                 foreach (var card in _cardByDoc.Values) card.Refresh();
+                CardsRebuildRequested?.Invoke();
                 // Сниппет другой длины — поиск заново.
                 if (key == AppSettings.KeyCardSize && _search is not null) Search(AppliedQuery);
                 break;

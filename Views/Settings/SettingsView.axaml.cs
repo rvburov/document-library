@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -35,6 +36,9 @@ public sealed partial class LogRowView : CommunityToolkit.Mvvm.ComponentModel.Ob
     public bool IsError => Row.Level is "Error" or "Fatal";
     public bool IsWarning => Row.Level == "Warning";
     public bool IsInfo => !IsError && !IsWarning;
+    /// <summary>Цвет уровня: ошибка красная, предупреждение оранжевое, прочее серое.</summary>
+    public IBrush LevelBrush => Res.Brush(IsError ? "BrushRed" : IsWarning ? "BrushOrange" : "BrushSecondaryText")
+                                ?? Brushes.Gray;
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _isOpen;
 }
 
@@ -43,15 +47,19 @@ public partial class SettingsView : UserControl
 {
     private enum Section { General, Sources, Cards, Look, Diagnostics, About }
 
-    private static readonly (Section Id, string Title, string Icon)[] Sections =
+    private static readonly (Section Id, string Key, string Title, string Icon)[] Sections =
     [
-        (Section.General,     "Общее",               "IconGeneral"),
-        (Section.Sources,     "Источники и чтение",  "IconFolderTree"),
-        (Section.Cards,       "Лента и карточки",    "IconCards"),
-        (Section.Look,        "Оформление",          "IconSun"),
-        (Section.Diagnostics, "Диагностика",         "IconCode"),
-        (Section.About,       "О программе",         "IconInfo"),
+        (Section.General,     "general",     "Общее",               "IconSliders"),
+        (Section.Sources,     "sources",     "Источники и чтение",  "IconFolderTree"),
+        (Section.Cards,       "cards",       "Лента и карточки",    "IconBook"),
+        (Section.Look,        "look",        "Оформление",          "IconSun"),
+        (Section.Diagnostics, "diagnostics", "Диагностика",         "IconCode"),
+        (Section.About,       "about",       "О программе",         "IconInfo"),
     ];
+
+    /// <summary>Разделы настроек для списка в боковой панели окна: ключ, подпись, иконка.</summary>
+    public static IEnumerable<(string Key, string Title, string Icon)> Categories =>
+        Sections.Select(c => (c.Key, c.Title, c.Icon));
 
     private readonly SettingsViewModel _vm = new();
     private LibraryService? _library;
@@ -69,7 +77,6 @@ public partial class SettingsView : UserControl
     {
         InitializeComponent();
         DataContext = _vm;
-        BuildNav();
         // Живой пример карточки следует за переключателями «Лента и карточки».
         AppSettings.Changed += key =>
         {
@@ -92,45 +99,18 @@ public partial class SettingsView : UserControl
         ShowSection(_section);
     }
 
-    public void SetNavVisible(bool visible)
+    /// <summary>Пункт списка разделов в боковой панели окна.</summary>
+    public void ShowCategory(string key)
     {
-        Nav.IsVisible = visible;
-        Layout.ColumnDefinitions[0].Width = visible ? new GridLength(232) : new GridLength(0);
+        var section = Sections.FirstOrDefault(c => c.Key == key);
+        if (section.Key is not null) ShowSection(section.Id);
     }
 
     // ── Разделы ───────────────────────────────────────────────────────────────
 
-    private void BuildNav()
-    {
-        NavList.Children.Clear();
-        foreach (var (id, title, icon) in Sections)
-        {
-            var button = new Button
-            {
-                Theme = Res.Theme("RowButton"),
-                Height = 30,
-                Padding = new Thickness(10, 0),
-                Content = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal, Spacing = 10,
-                    Children =
-                    {
-                        new Controls.Icon { Data = Res.Icon(icon), Width = 16, Height = 16 },
-                        new TextBlock { Text = title, FontSize = 12, VerticalAlignment = VerticalAlignment.Center },
-                    },
-                },
-            };
-            button.Classes.Set("on", id == _section);
-            if (id == _section) button.FontWeight = FontWeight.SemiBold;
-            button.Click += (_, _) => ShowSection(id);
-            NavList.Children.Add(button);
-        }
-    }
-
     private void ShowSection(Section section)
     {
         _section = section;
-        BuildNav();
         SectionTitle.Text = Sections.First(s => s.Id == section).Title;
         General.IsVisible = section == Section.General;
         Sources.IsVisible = section == Section.Sources;
@@ -267,10 +247,7 @@ public partial class SettingsView : UserControl
         FolderFilters.Children.Clear();
         foreach (var (id, label) in new[] { ("all", $"Все {all}"), ("problems", $"С проблемами {problems}"), ("read", $"Читаются {reading}") })
         {
-            var b = new Button { Content = label, Theme = Res.Theme("SegmentButton"), FontSize = 12 };
-            b.Classes.Set("on", id == _folderFilter);
-            b.Click += (_, _) => { _folderFilter = id; RefreshFolders(); };
-            FolderFilters.Children.Add(b);
+            FolderFilters.Children.Add(Segment(label, id == _folderFilter, () => { _folderFilter = id; RefreshFolders(); }));
         }
     }
 
@@ -326,12 +303,13 @@ public partial class SettingsView : UserControl
 
     private void BuildCardControls()
     {
-        BuildSegment(SizeSegment, [("Маленькая", CardSize.Small), ("Средняя", CardSize.Medium), ("Большая", CardSize.Large)],
-                     AppSettings.CardSize, size =>
-                     {
-                         AppSettings.CardSize = size;
-                         BuildCardControls();
-                     });
+        SizeSegment.Children.Clear();
+        foreach (var (label, size) in new[] { ("Маленькая", CardSize.Small), ("Средняя", CardSize.Medium), ("Большая", CardSize.Large) })
+            SizeSegment.Children.Add(Segment(label, size == AppSettings.CardSize, () =>
+            {
+                AppSettings.CardSize = size;
+                BuildCardControls();
+            }));
         BuildPreview();
     }
 
@@ -359,10 +337,14 @@ public partial class SettingsView : UserControl
                       "пробку в крышке нагнетания; пуск всухую не допускается.",
         };
         owner.PreviewSource = "Проектная документация";
-        Preview.Content = new CardView { DataContext = card };
+        Preview.Content = DocListView.PreviewCard(card, owner);
     }
 
     // ── Оформление ────────────────────────────────────────────────────────────
+
+    // «Масштаб интерфейса» и «Размер шрифта» — пункты сегментов, как в макете.
+    private static readonly double[] ScaleOptions = [0.9, 1.0, 1.1, 1.25];
+    private static readonly (string Label, int Delta)[] FontOptions = [("Мелкий", -1), ("Стандартный", 0), ("Крупный", 2)];
 
     private void BuildLookControls()
     {
@@ -391,25 +373,20 @@ public partial class SettingsView : UserControl
                     },
                 },
             };
-            var tile = new Button
+            var label = new TextBlock
             {
-                Theme = Res.Theme("ButtonCore"),
-                Content = new StackPanel
-                {
-                    Spacing = 6,
-                    Children =
-                    {
-                        preview,
-                        new TextBlock
-                        {
-                            Text = title, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center,
-                            FontWeight = on ? FontWeight.SemiBold : FontWeight.Normal,
-                            Foreground = Res.Brush(on ? "BrushAccent" : "BrushPrimaryText"),
-                        },
-                    },
-                },
+                Text = title, HorizontalAlignment = HorizontalAlignment.Center,
+                FontWeight = on ? FontWeight.SemiBold : FontWeight.Normal,
+                Foreground = Res.Brush(on ? "BrushAccent" : "BrushPrimaryText"),
             };
-            tile.Click += (_, _) =>
+            // Плитка — не кнопка: у кнопки Fluent свой фон под мышью, а плитке он не нужен.
+            var tile = new StackPanel
+            {
+                Spacing = 6, Background = Brushes.Transparent,
+                Cursor = new Cursor(StandardCursorType.Hand),
+                Children = { preview, label },
+            };
+            tile.Tapped += (_, _) =>
             {
                 AppSettings.Theme = theme;
                 ThemeManager.Apply(theme);
@@ -418,13 +395,25 @@ public partial class SettingsView : UserControl
             ThemeTiles.Children.Add(tile);
         }
 
-        BuildSegment(ScaleSegment, AppSettings.ScaleOptions.Select(s => ($"{s * 100:0}%", s)).ToArray(),
-                     Scaling.Current, scale => { Scaling.Set(scale); BuildLookControls(); });
-        BuildSegment(FontSegment, [("Мелкий", -1), ("Стандартный", 0), ("Крупный", 2)],
-                     FontScale.Delta, delta => { FontScale.Set(delta); BuildLookControls(); });
+        ScaleSegment.Children.Clear();
+        foreach (var scale in ScaleOptions)
+            ScaleSegment.Children.Add(Segment($"{scale * 100:0}%", Math.Abs(scale - Scaling.Current) < 0.001, () =>
+            {
+                Scaling.Set(scale);
+                BuildLookControls();
+            }));
 
-        SampleNote.Text = $"Масштаб {Scaling.Current * 100:0}% · основной текст {FontScale.Size("FontSizeBase"):0} px, " +
-                          $"мелкий {FontScale.Size("FontSizeSmall"):0} px";
+        FontSegment.Children.Clear();
+        foreach (var (label, delta) in FontOptions)
+            FontSegment.Children.Add(Segment(label, delta == FontScale.Delta, () =>
+            {
+                FontScale.SetDelta(delta);
+                BuildLookControls();
+            }));
+
+        var font  = Application.Current is { } app && app.TryFindResource("FontSizeBase", out var b) && b is double fb ? fb : 12;
+        var small = Application.Current is { } app2 && app2.TryFindResource("FontSizeSmall", out var sm) && sm is double fs ? fs : 10;
+        SampleNote.Text = $"Масштаб {Scaling.Current * 100:0}% · основной текст {font:0} px, мелкий {small:0} px";
     }
 
     private static Control Column(Control control, int column)
@@ -433,24 +422,32 @@ public partial class SettingsView : UserControl
         return control;
     }
 
-    private void BuildSegment<T>(StackPanel panel, (string Label, T Value)[] items, T current, Action<T> pick)
+    // Сегмент выбора — как «Текст / Как в документе» в панели чтения: обертка Border.modeseg
+    // в разметке, кнопки ToggleButton.modeseg внутри. Выбран ровно один.
+    private static ToggleButton Segment(string label, bool on, Action pick)
     {
-        panel.Children.Clear();
-        foreach (var (label, value) in items)
+        var b = new ToggleButton { Content = label, IsChecked = on };
+        b.Classes.Add("modeseg");
+        b.Click += (_, _) =>
         {
-            var b = new Button { Content = label, Theme = Res.Theme("SegmentButton"), FontSize = 12 };
-            b.Classes.Set("on", EqualityComparer<T>.Default.Equals(value, current));
-            b.Click += (_, _) => pick(value);
-            panel.Children.Add(b);
-        }
+            b.IsChecked = true;
+            pick();
+        };
+        return b;
     }
 
     // ── Диагностика ───────────────────────────────────────────────────────────
 
     private void BuildLevelFilter()
     {
-        BuildSegment(LevelSegment, [("Все", "all"), ("Ошибки", "errors"), ("Предупреждения", "warnings")],
-                     _levelFilter, level => { _levelFilter = level; BuildLevelFilter(); _ = LoadLogAsync(reset: true); });
+        LevelSegment.Children.Clear();
+        foreach (var (label, level) in new[] { ("Все", "all"), ("Ошибки", "errors"), ("Предупреждения", "warnings") })
+            LevelSegment.Children.Add(Segment(label, level == _levelFilter, () =>
+            {
+                _levelFilter = level;
+                BuildLevelFilter();
+                _ = LoadLogAsync(reset: true);
+            }));
     }
 
     private LogReader.LogQuery LevelQuery() => _levelFilter switch
@@ -486,7 +483,7 @@ public partial class SettingsView : UserControl
 
     private void OnMoreLogs(object? sender, RoutedEventArgs e) => _ = LoadLogAsync(reset: false);
 
-    private void OnLogRowClick(object? sender, RoutedEventArgs e)
+    private void OnLogRowTapped(object? sender, TappedEventArgs e)
     {
         if ((sender as Control)?.DataContext is LogRowView row) row.IsOpen = !row.IsOpen;
     }
@@ -574,8 +571,7 @@ public partial class SettingsView : UserControl
         {
             _update = await UpdateService.CheckAsync(AppSettings.UpdateFolder);
             UpdateText.Text = _update.Message;
-            var ok = _update.Result == UpdateCheck.UpToDate;
-            UpdateIcon.IsVisible = ok;
+            UpdateIcon.IsVisible = _update.Result == UpdateCheck.UpToDate;
             UpdateText.Foreground = Res.Brush(_update.Result == UpdateCheck.Error ? "BrushRed" : "BrushPrimaryText");
             ApplyUpdateButton.IsVisible = _update.Result == UpdateCheck.Available;
         }

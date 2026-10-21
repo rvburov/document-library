@@ -3,40 +3,37 @@
               xmlns:d="using:PdfLibrary.Views.Dialogs"
               x:Class="PdfLibrary.Views.Dialogs.AddSourceDialog">
 
-    <!-- Макет: «Кнопка «+»: меню и окна» → «Источник». -->
+    <!-- «Добавить источник»: подписи полей жирным серым, поля
+         высотой 34, кнопки «dialog» справа внизу. -->
     <StackPanel>
         <TextBlock Text="Папка с PDF на диске или в сети. Подпапки тоже войдут, файлы останутся на своих местах."
-                   Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
+                   Foreground="{DynamicResource BrushSecondaryText}" TextWrapping="Wrap" Margin="0,0,0,14" />
 
-        <TextBlock Text="Папка" FontSize="12" Margin="0,14,0,6" />
-        <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="Папка" Margin="0,0,0,6" FontWeight="{StaticResource FontWeightBold}" Foreground="{DynamicResource BrushSecondaryText}" />
+        <Grid ColumnDefinitions="*,8,Auto" Margin="0,0,0,12">
             <TextBox x:Name="PathBox" Watermark="Вставьте путь, например \\srv-01\archive"
+                     Height="34" VerticalContentAlignment="Center" CornerRadius="{StaticResource RadiusMedium}"
                      TextChanged="OnPathChanged" />
-            <Button Grid.Column="1" Theme="{StaticResource SecondaryButton}" Margin="8,0,0,0"
-                    CornerRadius="{StaticResource RadiusSmall}" Content="Обзор…" Click="OnBrowse" />
+            <Button Grid.Column="2" Classes="dialog" Content="Обзор…" Click="OnBrowse" />
         </Grid>
 
-        <TextBlock Text="Название" FontSize="12" Margin="0,14,0,6" />
-        <TextBox x:Name="NameBox" Watermark="Возьмется из имени папки" />
+        <TextBlock Text="Название" Margin="0,0,0,6" FontWeight="{StaticResource FontWeightBold}" Foreground="{DynamicResource BrushSecondaryText}" />
+        <TextBox x:Name="NameBox" Watermark="Возьмется из имени папки" Margin="0,0,0,12"
+                 Height="34" VerticalContentAlignment="Center" CornerRadius="{StaticResource RadiusMedium}" />
 
-        <StackPanel x:Name="GroupBlock">
-            <TextBlock Text="Группа" FontSize="12" Margin="0,14,0,6" />
-            <ItemsControl x:Name="GroupPills">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
+        <StackPanel x:Name="GroupBlock" Margin="0,0,0,12">
+            <TextBlock Text="Группа" Margin="0,0,0,6" FontWeight="{StaticResource FontWeightBold}" Foreground="{DynamicResource BrushSecondaryText}" />
+            <ComboBox x:Name="GroupBox" HorizontalAlignment="Stretch" Height="34"
+                      Background="{DynamicResource BrushSecondaryBg}" CornerRadius="{StaticResource RadiusBase}" />
         </StackPanel>
 
-        <TextBlock x:Name="ErrorText" Foreground="{DynamicResource BrushRed}" FontSize="12"
-                   TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="False" />
+        <TextBlock x:Name="ErrorText" Foreground="{DynamicResource BrushRed}"
+                   TextWrapping="Wrap" Margin="0,0,0,12" IsVisible="False" />
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,20,0,0">
-            <Button Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
-            <Button x:Name="AddButton" Theme="{StaticResource PrimaryButton}" Content="Добавить"
+        <Grid ColumnDefinitions="*,Auto,8,Auto" Margin="0,4,0,0">
+            <Button Grid.Column="1" Classes="dialog" Content="Отмена" Click="OnCancel" />
+            <Button Grid.Column="3" x:Name="AddButton" Classes="dialog" Content="Добавить"
                     Click="OnAdd" IsEnabled="False" />
-        </StackPanel>
+        </Grid>
     </StackPanel>
 </d:DialogBase>

@@ -57,7 +57,7 @@ public sealed class AutostartTests
     [Theory]
     [InlineData("\"C:\\App\\PdfLibrary.exe\"",                "C:\\App\\PdfLibrary.exe")]
     [InlineData("\"C:\\App\\PdfLibrary.exe\" --background",   "C:\\App\\PdfLibrary.exe")]   // запись до 1.0.5
-    [InlineData("\"C:\\Program Files\\Smart Base\\App.exe\"", "C:\\Program Files\\Smart Base\\App.exe")]
+    [InlineData("\"C:\\Program Files\\Pdf Library\\App.exe\"", "C:\\Program Files\\Pdf Library\\App.exe")]
     [InlineData("C:\\App\\PdfLibrary.exe",                    "C:\\App\\PdfLibrary.exe")]   // без кавычек
     [InlineData("",     null)]
     [InlineData("   ",  null)]
@@ -74,7 +74,7 @@ public sealed class AutostartTests
 
         const string exec = "/opt/pdflibrary/PdfLibrary";
         Assert.Equal(exec, Autostart.ParseLinuxDesktopTarget(Autostart.BuildLinuxDesktop(exec)));
-        // Запись с аргументом (так ее писали ранние сборки SmartBase) — путь все равно вычитывается.
+        // Запись с аргументом (так ее пишут некоторые программы) — путь все равно вычитывается.
         Assert.Equal(exec, Autostart.ParseLinuxDesktopTarget($"[Desktop Entry]\nExec=\"{exec}\" --background\n"));
         Assert.Null(Autostart.ParseLinuxDesktopTarget("[Desktop Entry]\nName=PdfLibrary\n"));
     }

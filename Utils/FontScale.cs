@@ -1,40 +1,55 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 
 namespace PdfLibrary.Utils;
 
 /// <summary>
-/// Живой размер шрифта — настройка «Размер шрифта» (мелкий, стандартный, крупный). Хранит
-/// стандартные размеры из Typography.axaml и пишет в ресурсы программы «стандарт + прибавка»:
-/// потребители на DynamicResource обновляются мгновенно. Карточки ленты подстраивают высоту
-/// под шрифт сами (см. <c>CardMetrics</c>).
+/// Живой размер шрифта приложения. Хранит стандартные размеры из Typography.axaml
+/// (FontSizeSmall/Base/Large) и пишет в <see cref="Application"/>.Resources «эффективные»
+/// (стандарт + дельта). Потребители на DynamicResource обновляются мгновенно; виды,
+/// строящие текст в C# (карточки ленты, боковая панель), слушают <see cref="Changed"/> и
+/// пересобираются.
+/// Диапазон дельты и хранение — в <see cref="AppSettings"/>.
 /// </summary>
 public static class FontScale
 {
-    private static readonly string[] Keys =
-        ["FontSizeSmall", "FontSizeBase", "FontSizeMedium", "FontSizeLargeReader", "FontSizeLarge", "FontSizeHero"];
+    private static double _baseSmall = 11, _baseBase = 12, _baseMedium = 16, _baseLarge = 20;
+    private static double _baseH3 = 14, _baseMono = 11;
+    private static bool _ready;
 
-    private static readonly Dictionary<string, double> Standard = [];
-
-    /// <summary>Текущая прибавка в пикселях (0 — стандарт).</summary>
+    /// <summary>Текущая дельта в пикселях к стандарту (0 = стандарт).</summary>
     public static int Delta { get; private set; }
 
-    /// <summary>Размер изменился.</summary>
+    /// <summary>Стандартный базовый размер текста (FontSizeBase из Typography, без дельты).</summary>
+    public static double BaseFontSize => _baseBase;
+
+    /// <summary>Размер изменился — C#-видам пора пересобраться.</summary>
     public static event Action? Changed;
 
-    /// <summary>Старт: запомнить стандарт и применить сохраненную прибавку. Зовется до создания окна.</summary>
+    /// <summary>
+    /// Старт: считать стандартные размеры из Typography и применить сохраненную дельту.
+    /// Вызывать после AppSettings.AttachStore и до создания MainWindow.
+    /// </summary>
     public static void Init()
     {
-        var app = Application.Current!;
-        foreach (var key in Keys)
-            if (!Standard.ContainsKey(key))
-                Standard[key] = app.TryFindResource(key, out var v) && v is double d ? d : 13;
+        // Стандарт читаем ДО первой записи в Application.Resources (иначе прочитаем уже override).
+        _baseSmall  = Read("FontSizeSmall",  11);
+        _baseBase   = Read("FontSizeBase",   12);
+        _baseMedium = Read("FontSizeMedium", 16);
+        _baseLarge  = Read("FontSizeLarge",  20);
+        _baseH3     = Read("FontSizeH3",     14);
+        _baseMono   = Read("FontSizeMono",   11);
+        _ready = true;
+
         Delta = AppSettings.FontDelta;
         Write();
     }
 
-    public static void Set(int delta)
+    /// <summary>Установить дельту (с зажимом в допустимый диапазон), сохранить и применить вживую.</summary>
+    public static void SetDelta(int delta)
     {
+        delta = Math.Clamp(delta, AppSettings.FontDeltaMin, AppSettings.FontDeltaMax);
         if (delta == Delta) return;
         Delta = delta;
         AppSettings.FontDelta = delta;
@@ -42,12 +57,50 @@ public static class FontScale
         Changed?.Invoke();
     }
 
-    /// <summary>Размер с прибавкой — для текста, который строится в коде.</summary>
-    public static double Size(string key) => (Standard.TryGetValue(key, out var v) ? v : 13) + Delta;
-
     private static void Write()
     {
-        if (Application.Current is not { } app) return;
-        foreach (var (key, size) in Standard) app.Resources[key] = size + Delta;
+        if (!_ready) return;
+        var r = Application.Current!.Resources;
+        r["FontSizeSmall"]  = _baseSmall  + Delta;
+        r["FontSizeBase"]   = _baseBase   + Delta;
+        r["FontSizeMedium"] = _baseMedium + Delta;
+        r["FontSizeLarge"]  = _baseLarge  + Delta;
+        // Дельта одна на все размеры: разница между ними задумана постоянной, а не долей от кегля.
+        r["FontSizeH3"]     = _baseH3     + Delta;
+        r["FontSizeMono"]   = _baseMono   + Delta;
+
+        // Целая высота строки для пар «надпись показа + поле правки» (название в навбарах,
+        // текст ячейки таблицы). Естественная высота строки шрифта дробная, а TextBlock и
+        // TextBox округляют ее ПО РАЗНЫМ сеткам: TextBlock — вверх до целого (масштаб 1,1
+        // зашит в его MeasureOverride), поле — по сетке 1/RenderScaling (на Retina 0.5).
+        // Боксы получаются разной высоты, каждый центрируется в контейнере своим округлением,
+        // и текст при входе в правку опускался на физический пиксель. Целый LineHeight у ОБОИХ
+        // уравнивает боксы на любой сетке — совпадение перестает зависеть от шрифта, кегля,
+        // веса и масштаба экрана.
+        r["LineHeightBase"]  = WholeLineHeight(_baseBase  + Delta, FontWeight.Normal);
+        r["LineHeightLarge"] = WholeLineHeight(_baseLarge + Delta, ReadWeight("FontWeightBold", FontWeight.SemiBold));
     }
+
+    /// <summary>Высота строки шрифта приложения, округленная вверх до целого. Пустой текст у
+    /// TextLayout дает ровно одну строку естественной высоты. Без FontManager (ранний старт,
+    /// голый юнит-стенд) — NaN: LineHeight «не задан», поведение как без токена.</summary>
+    private static double WholeLineHeight(double fontSize, FontWeight weight)
+    {
+        try
+        {
+            var family = Application.Current!.TryFindResource("FontFamilyBase", out var f) && f is FontFamily ff
+                ? ff
+                : FontFamily.Default;
+            var layout = new Avalonia.Media.TextFormatting.TextLayout(
+                "", new Typeface(family, weight: weight), fontSize, null);
+            return Math.Ceiling(layout.Height);
+        }
+        catch { return double.NaN; }
+    }
+
+    private static FontWeight ReadWeight(string key, FontWeight fallback) =>
+        Application.Current!.TryFindResource(key, out var v) && v is FontWeight w ? w : fallback;
+
+    private static double Read(string key, double fallback) =>
+        Application.Current!.TryFindResource(key, out var v) && v is double d ? d : fallback;
 }

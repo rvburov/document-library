@@ -26,7 +26,7 @@ public partial class AddSourceDialog : DialogBase
         InitializeComponent();
         _groups = groups;
         GroupBlock.IsVisible = groups.Count > 0;
-        BuildPills();
+        BuildGroups();
         if (path is not null) PathBox.Text = path;
     }
 
@@ -34,18 +34,13 @@ public partial class AddSourceDialog : DialogBase
 
     public override void OnShown() => PathBox.Focus();
 
-    private void BuildPills()
+    // Группа — списком: «Без группы» первым пунктом.
+    private void BuildGroups()
     {
-        var pills = new List<Button>();
-        foreach (var (id, name) in new[] { ((int?)null, "Без группы") }.Concat(_groups.Select(g => ((int?)g.Id, g.Name))))
-        {
-            var pill = new Button { Content = name, Margin = new Avalonia.Thickness(0, 0, 6, 6) };
-            pill.Theme = Res.Theme("PillButton");
-            pill.Classes.Set("on", id == _group);
-            pill.Click += (_, _) => { _group = id; BuildPills(); };
-            pills.Add(pill);
-        }
-        GroupPills.ItemsSource = pills;
+        GroupBox.ItemsSource = new[] { "Без группы" }.Concat(_groups.Select(g => g.Name)).ToList();
+        GroupBox.SelectedIndex = 0;
+        GroupBox.SelectionChanged += (_, _) =>
+            _group = GroupBox.SelectedIndex > 0 ? _groups[GroupBox.SelectedIndex - 1].Id : null;
     }
 
     private void OnPathChanged(object? sender, TextChangedEventArgs e)

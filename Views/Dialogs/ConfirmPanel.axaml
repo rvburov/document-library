@@ -4,11 +4,11 @@
               x:Class="PdfLibrary.Views.Dialogs.ConfirmPanel">
 
     <!-- Подтверждение внутри окна: «Убрать из библиотеки», «Очистить кеш», «Очистить журнал». -->
-    <StackPanel>
-        <TextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="12" Margin="0,10,0,0" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,20,0,0">
-            <Button Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
-            <Button x:Name="OkButton" Theme="{StaticResource PrimaryButton}" Click="OnOk" />
-        </StackPanel>
+    <StackPanel Spacing="16">
+        <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="*,Auto,8,Auto">
+            <Button Grid.Column="1" Classes="dialog" Content="Отмена" Click="OnCancel" />
+            <Button Grid.Column="3" x:Name="OkButton" Classes="dialog" Click="OnOk" />
+        </Grid>
     </StackPanel>
 </d:DialogBase>

@@ -1,79 +1,151 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:c="using:PdfLibrary.Controls"
+        xmlns:comp="using:PdfLibrary.Controls.Components"
         xmlns:lib="using:PdfLibrary.Views.Library"
-        xmlns:reader="using:PdfLibrary.Views.Reader"
         xmlns:settings="using:PdfLibrary.Views.Settings"
         xmlns:welcome="using:PdfLibrary.Views.Welcome"
         xmlns:dialogs="using:PdfLibrary.Views.Dialogs"
+        xmlns:b="using:PdfLibrary.Controls.Behaviors"
         x:Class="PdfLibrary.Views.MainWindow"
+        Classes="main"
         Title="Библиотека PDF"
         Width="1331" Height="813" MinWidth="960" MinHeight="600"
+        Background="{DynamicResource BrushBg}"
         WindowStartupLocation="CenterScreen"
-        DragDrop.AllowDrop="True">
+        DragDrop.AllowDrop="True"
+        b:LineMetrics.FollowsAppZoom="True">
 
-    <!--
-      Главное окно: панель разделов слева (48 px) и экран справа — лента, панель чтения,
-      настройки или первый запуск. Поверх — слой диалогов и строка уведомлений.
-      Весь интерфейс масштабируется настройкой «Масштаб интерфейса» (LayoutTransformControl).
-    -->
-    <LayoutTransformControl x:Name="ZoomRoot">
-        <Panel>
-            <Grid ColumnDefinitions="48,*">
+    <!-- Каркас окна: панель разделов, боковая панель, раздел и правая
+         панель чтения, линии между ними и ручки ширины. Хост масштабирования: LayoutTransform на
+         корне → весь интерфейс перекомпоновывается в логических пикселях и заполняет окно
+         (Utils/Scaling + MainWindow.ApplyScale). -->
+    <LayoutTransformControl x:Name="ScaleHost">
+    <Panel>
+    <Grid x:Name="RootGrid">
+        <Grid.ColumnDefinitions>
+            <!-- ActivityBar | разделитель | сайдбар | контент | разделитель | панель чтения -->
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="220" MinWidth="180" MaxWidth="500" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="0" />
+        </Grid.ColumnDefinitions>
 
-                <!-- ── Панель разделов ───────────────────────────────────────── -->
-                <Border Grid.Column="0" Background="{DynamicResource BrushSecondaryBg}"
-                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineRight}">
-                    <DockPanel Margin="0,12">
-                        <StackPanel DockPanel.Dock="Top" Spacing="8" HorizontalAlignment="Center">
-                            <Button x:Name="SidebarButton" Theme="{StaticResource ActivityButton}"
-                                    ToolTip.Tip="Скрыть боковую панель" Click="OnToggleSidebar">
-                                <c:Icon x:Name="SidebarIcon" Classes="large" Data="{StaticResource IconSidebarClose}" />
-                            </Button>
-                            <Rectangle Width="24" Height="1" Fill="{DynamicResource BrushSeparator}" Margin="0,4" />
-                            <Button x:Name="LibraryButton" Theme="{StaticResource ActivityButton}" Classes="on"
-                                    ToolTip.Tip="Библиотека" Click="OnLibrary">
-                                <c:Icon Classes="large" Data="{StaticResource IconLibrary}" />
-                            </Button>
-                        </StackPanel>
-                        <StackPanel DockPanel.Dock="Bottom" Spacing="8" HorizontalAlignment="Center">
-                            <Button x:Name="ReadingButton" Theme="{StaticResource ActivityButton}" IsVisible="False"
-                                    Click="OnReadingClick">
-                                <c:ProgressRing x:Name="ReadingRing" Width="22" Height="22"
-                                                Track="{DynamicResource BrushLineStrong}" Arc="{DynamicResource BrushAccent}" />
-                            </Button>
-                            <Button x:Name="SettingsButton" Theme="{StaticResource ActivityButton}"
-                                    ToolTip.Tip="Настройки" Click="OnSettings">
-                                <c:Icon Classes="large" Data="{StaticResource IconSettings}" />
-                            </Button>
-                        </StackPanel>
-                        <Panel />
-                    </DockPanel>
-                </Border>
+        <!-- Подложка под ActivityBar и разделитель ЕДИНОЙ заливкой (Aliased): заливка
+             панели и защелкнутая в целый пиксель линия — разные элементы, на дробных
+             позициях (зум ≠ 1) их края расходились и между ними оставалась белая щель. -->
+        <Rectangle Grid.Column="0" Grid.ColumnSpan="2"
+                   RenderOptions.EdgeMode="Aliased"
+                   Fill="{DynamicResource BrushSecondaryBg}" />
 
-                <!-- ── Экраны ─────────────────────────────────────────────────── -->
-                <Panel Grid.Column="1">
-                    <lib:FeedView x:Name="Feed" />
-                    <reader:ReaderScreen x:Name="Reader" IsVisible="False" />
-                    <settings:SettingsView x:Name="Settings" IsVisible="False" />
-                    <welcome:WelcomeView x:Name="Welcome" IsVisible="False" />
-                </Panel>
-            </Grid>
+        <!-- Левая панель разделов (48px) -->
+        <comp:ActivityBar Grid.Column="0"
+                          x:Name="ActivityBarControl" />
 
-            <!-- Уведомление внизу справа: «Скопировано…», ошибки открытия файла. -->
-            <Border x:Name="NoticeBar" IsVisible="False" Classes="popup"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,16"
-                    MaxWidth="460" Padding="14,10" Background="{DynamicResource BrushBg}">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock x:Name="NoticeText" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Theme="{StaticResource IconButton}" Margin="10,0,0,0"
-                            ToolTip.Tip="Закрыть" Click="OnCloseNotice">
-                        <c:Icon Classes="small" Data="{StaticResource IconClose}" />
-                    </Button>
-                </Grid>
+        <!-- Вертикальный разделитель справа от панели разделов -->
+        <Border Grid.Column="1"
+                Classes="separator v" />
+
+        <!-- Боковые панели (показываются по разделу). Разделительная линия — отдельный
+             separator v у правого края: отдельная линия защелкивается в целый пиксель. -->
+        <Grid Grid.Column="2">
+            <comp:LibrarySidebar x:Name="LibrarySidebar" />
+            <comp:SidebarList x:Name="SettingsSidebar" IsVisible="False" />
+        </Grid>
+        <Border Grid.Column="2"
+                x:Name="SidebarSeparator"
+                Classes="separator v"
+                HorizontalAlignment="Right" />
+
+        <!-- Основная область: лента, настройки или первый запуск. -->
+        <Grid Grid.Column="3" x:Name="ModulesHost">
+            <lib:LibraryView x:Name="LibraryModule" />
+            <settings:SettingsView x:Name="SettingsModule" IsVisible="False" />
+            <welcome:WelcomeView x:Name="WelcomeModule" IsVisible="False" />
+        </Grid>
+
+        <!-- Вертикальный разделитель слева от панели чтения -->
+        <Border Grid.Column="4"
+                x:Name="ReaderSeparator"
+                Classes="separator v"
+                IsVisible="False" />
+
+        <!-- Правая панель — чтение документа. -->
+        <Grid Grid.Column="5">
+            <lib:DocReaderView x:Name="LibraryReader" IsVisible="False" />
+
+            <!-- Ручка перетаскивания у левого края панели — аналогично сайдбару. -->
+            <Border x:Name="ReaderResizeGrip"
+                    Width="11" Height="34"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="-5,0,0,0"
+                    CornerRadius="4"
+                    Background="{DynamicResource BrushBg}"
+                    BorderBrush="{DynamicResource BrushSeparator}"
+                    BorderThickness="{DynamicResource BorderLine}"
+                    Cursor="SizeWestEast"
+                    IsVisible="False"
+                    PointerPressed="OnReaderGripPressed"
+                    PointerMoved="OnReaderGripMoved"
+                    PointerReleased="OnReaderGripReleased">
+                <StackPanel Orientation="Vertical" Spacing="3"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                    <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                    <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                </StackPanel>
             </Border>
+        </Grid>
 
-            <dialogs:DialogHost x:Name="DialogLayer" />
-        </Panel>
+        <!-- Линия под титульной зоной (на высоте навбара = 56px) через сайдбар, контент и
+             панель чтения. У панели разделов собственный короткий разделитель. -->
+        <Border Grid.Column="1" Grid.ColumnSpan="5"
+                x:Name="TitleLine"
+                Classes="separator h"
+                VerticalAlignment="Top"
+                Margin="0,56,0,0" />
+
+        <!-- Самая верхняя линия окна — единой полосой над всеми колонками. На macOS скрыта:
+             системная рамка уже рисует кромку под заголовком окна. -->
+        <Border Grid.Column="0" Grid.ColumnSpan="6"
+                Classes="separator h"
+                VerticalAlignment="Top"
+                IsVisible="{OnPlatform True, macOS=False}" />
+
+        <!-- Ручка ширины сайдбара. Закреплена у правого края колонки сайдбара и висит поверх
+             соседнего блока за счет отрицательного отступа. Объявлена последней → рисуется
+             над панелями. -->
+        <Border x:Name="ResizeGrip"
+                Grid.Column="2"
+                Width="11" Height="34"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Margin="0,0,-5,0"
+                CornerRadius="4"
+                Background="{DynamicResource BrushBg}"
+                BorderBrush="{DynamicResource BrushSeparator}"
+                BorderThickness="{DynamicResource BorderLine}"
+                Cursor="SizeWestEast"
+                PointerPressed="OnGripPressed"
+                PointerMoved="OnGripMoved"
+                PointerReleased="OnGripReleased">
+            <StackPanel Orientation="Vertical" Spacing="3"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+            </StackPanel>
+        </Border>
+
+    </Grid>
+
+    <!-- Слой диалогов поверх всего окна. -->
+    <dialogs:DialogHost x:Name="DialogLayer" />
+    </Panel>
     </LayoutTransformControl>
+
 </Window>

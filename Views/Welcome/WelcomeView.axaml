@@ -1,35 +1,48 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:c="using:PdfLibrary.Controls"
              x:Class="PdfLibrary.Views.Welcome.WelcomeView"
-             Focusable="True">
+             Focusable="True"
+             Background="{DynamicResource BrushBg}">
 
     <!--
       Экран первого запуска (макет, доска 4): одна кнопка «Выбрать папку», папку можно и
       перетащить, и вставить путь. После добавления — что найдено, ход чтения и «Открыть библиотеку».
     -->
+    <DockPanel>
+    <!-- Шапка высотой с навбар — как у ленты: линию под ней на высоте 56 рисует главное окно. -->
+    <Grid DockPanel.Dock="Top" Height="56" Margin="16,0">
+        <TextBlock Text="Библиотека PDF" VerticalAlignment="Center"
+                   FontSize="{DynamicResource FontSizeLarge}"
+                   FontWeight="{StaticResource FontWeightBold}" />
+    </Grid>
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <StackPanel MaxWidth="640" Margin="32,64,32,32" HorizontalAlignment="Center">
-            <TextBlock Text="Библиотека PDF" FontSize="{DynamicResource FontSizeHero}" FontWeight="SemiBold" />
-            <TextBlock Classes="muted" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="14"
-                       Text="Подключите папки с PDF — файлы останутся на своих местах. Программа прочитает их текст и будет искать внутри документов." />
+        <StackPanel MaxWidth="640" Margin="32,40,32,32" HorizontalAlignment="Center">
+            <TextBlock Text="Подключите папки с PDF" FontSize="{DynamicResource FontSizeMedium}"
+                       FontWeight="{StaticResource FontWeightBold}" />
+            <TextBlock Foreground="{DynamicResource BrushSecondaryText}" TextWrapping="Wrap" Margin="0,8,0,0"
+                       Text="Файлы останутся на своих местах. Программа прочитает их текст и будет искать внутри документов." />
 
             <!-- Начало: место для перетаскивания и одна кнопка -->
             <Border x:Name="StartBlock" Margin="0,28,0,0" Padding="24,32" CornerRadius="{StaticResource RadiusLarge}"
-                    BorderThickness="0" Background="{DynamicResource BrushInactiveBg}">
+                    BorderThickness="0" Background="{DynamicResource BrushSecondaryBg}">
                 <Panel>
                     <Rectangle Stroke="{DynamicResource BrushLineStrong}" StrokeThickness="1.5" StrokeDashArray="5,4"
                                RadiusX="12" RadiusY="12" Margin="-24,-32" />
                     <StackPanel HorizontalAlignment="Center" Spacing="8">
-                        <c:Icon Data="{StaticResource IconFolderPlus}" Width="36" Height="36" StrokeThickness="1.5"
-                                Foreground="{DynamicResource BrushAccent}" HorizontalAlignment="Center" />
-                        <TextBlock Text="Перетащите папку сюда" FontWeight="SemiBold" FontSize="15"
-                                   HorizontalAlignment="Center" />
-                        <TextBlock Classes="muted" FontSize="12" TextAlignment="Center" TextWrapping="Wrap"
+                        <Viewbox Width="{StaticResource IconSizeXLarge}" Height="{StaticResource IconSizeXLarge}" HorizontalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconFolderPlus}" Stroke="{DynamicResource BrushAccent}"
+                                      StrokeThickness="{StaticResource IconStrokeMedium}"
+                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                            </Canvas>
+                        </Viewbox>
+                        <TextBlock Text="Перетащите папку сюда" FontWeight="{StaticResource FontWeightBold}"
+                                   FontSize="{DynamicResource FontSizeH3}" HorizontalAlignment="Center" />
+                        <TextBlock Foreground="{DynamicResource BrushSecondaryText}" TextAlignment="Center" TextWrapping="Wrap"
                                    Text="или выберите ее, или вставьте путь — в том числе сетевой. Подпапки тоже войдут." />
-                        <Button Theme="{StaticResource PrimaryButton}" Content="Выбрать папку" HorizontalAlignment="Center"
-                                Margin="0,8,0,0" Click="OnPick" />
-                        <TextBlock x:Name="ErrorText" Foreground="{DynamicResource BrushRed}" FontSize="12"
+                        <Button Classes="dialog auto accent" Content="Выбрать папку" HorizontalAlignment="Center"
+                                Padding="16,0" Margin="0,8,0,0" Click="OnPick" />
+                        <TextBlock x:Name="ErrorText" Foreground="{DynamicResource BrushRed}"
                                    TextAlignment="Center" TextWrapping="Wrap" IsVisible="False" />
                     </StackPanel>
                 </Panel>
@@ -37,54 +50,82 @@
 
             <!-- Добавлено: найденное, ход чтения, переход в ленту -->
             <StackPanel x:Name="AddedBlock" Margin="0,28,0,0" Spacing="12" IsVisible="False">
-                <Border Classes="group" Padding="14,12">
+                <Border Classes="dataBox" Padding="14,12">
                     <StackPanel Spacing="10">
                         <ItemsControl x:Name="AddedList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="x:String">
                                     <Grid ColumnDefinitions="Auto,*" Margin="0,4">
-                                        <c:Icon Data="{StaticResource IconCheck}" Classes="small"
-                                                Foreground="{DynamicResource BrushGreen}" VerticalAlignment="Top" Margin="0,2,10,0" />
-                                        <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" FontSize="12" />
+                                        <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}"
+                                                 VerticalAlignment="Top" Margin="0,0,10,0">
+                                            <Canvas Width="24" Height="24">
+                                                <Path Data="{StaticResource IconCheck}" Stroke="{DynamicResource BrushGreen}"
+                                                      StrokeThickness="{StaticResource IconStrokeMediumBold}"
+                                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                                            </Canvas>
+                                        </Viewbox>
+                                        <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource BrushPrimaryText}" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <Button Theme="{StaticResource SecondaryButton}" Content="Еще папку" HorizontalAlignment="Left"
+                        <Button Classes="dialog" Content="Еще папку" HorizontalAlignment="Left"
                                 Click="OnPick" />
                     </StackPanel>
                 </Border>
                 <StackPanel Spacing="6">
-                    <TextBlock x:Name="ReadText" FontSize="12" TextWrapping="Wrap" />
+                    <TextBlock x:Name="ReadText" TextWrapping="Wrap" />
                     <ProgressBar x:Name="ReadBar" Height="4" MinHeight="4" Minimum="0" Maximum="1"
                                  Foreground="{DynamicResource BrushAccent}" Background="{DynamicResource BrushSeparator}" />
-                    <TextBlock Classes="small muted" Text="Лента уже открыта — то, что прочитано, ищется сразу." />
+                    <TextBlock FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource BrushSecondaryText}"
+                               Text="Лента уже открыта — то, что прочитано, ищется сразу." />
                 </StackPanel>
-                <Button Theme="{StaticResource PrimaryButton}" Content="Открыть библиотеку" HorizontalAlignment="Left"
-                        Click="OnOpenLibrary" />
+                <Button Classes="dialog auto accent" Content="Открыть библиотеку" HorizontalAlignment="Left"
+                        Padding="16,0" Click="OnOpenLibrary" />
             </StackPanel>
 
             <!-- Как это работает -->
             <Grid ColumnDefinitions="*,*,*" Margin="0,36,0,0">
                 <StackPanel Spacing="4" Margin="0,0,16,0">
-                    <c:Icon Data="{StaticResource IconFolders}" Foreground="{DynamicResource BrushAccent}" />
-                    <TextBlock Text="Подключите папки" FontWeight="SemiBold" FontSize="12" Margin="0,4,0,0" />
-                    <TextBlock Classes="desc" Text="Локальные и сетевые. Новые файлы программа заметит сама." />
+                    <Viewbox Width="{StaticResource IconSizeLarge}" Height="{StaticResource IconSizeLarge}" HorizontalAlignment="Left">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconFolders}" Stroke="{DynamicResource BrushAccent}"
+                                      StrokeThickness="{StaticResource IconStrokeMedium}"
+                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                            </Canvas>
+                        </Viewbox>
+                    <TextBlock Text="Подключите папки" FontWeight="{StaticResource FontWeightBold}" Margin="0,4,0,0" />
+                    <TextBlock FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource BrushSecondaryText}" TextWrapping="Wrap" Text="Локальные и сетевые. Новые файлы программа заметит сама." />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,16,0">
-                    <c:Icon Data="{StaticResource IconClock}" Foreground="{DynamicResource BrushAccent}" />
-                    <TextBlock Text="Текст читается в фоне" FontWeight="SemiBold" FontSize="12" Margin="0,4,0,0" />
-                    <TextBlock Classes="desc" Text="Работать можно сразу; ход чтения виден в панели слева." />
+                    <Viewbox Width="{StaticResource IconSizeLarge}" Height="{StaticResource IconSizeLarge}" HorizontalAlignment="Left">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconClock}" Stroke="{DynamicResource BrushAccent}"
+                                      StrokeThickness="{StaticResource IconStrokeMedium}"
+                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                            </Canvas>
+                        </Viewbox>
+                    <TextBlock Text="Текст читается в фоне" FontWeight="{StaticResource FontWeightBold}" Margin="0,4,0,0" />
+                    <TextBlock FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource BrushSecondaryText}" TextWrapping="Wrap" Text="Работать можно сразу; ход чтения виден в панели слева." />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="4">
-                    <c:Icon Data="{StaticResource IconSearch}" Foreground="{DynamicResource BrushAccent}" />
-                    <TextBlock Text="Ищите внутри PDF" FontWeight="SemiBold" FontSize="12" Margin="0,4,0,0" />
-                    <TextBlock Classes="desc" Text="По словам, числам и датам — с подсветкой найденного на страницах." />
+                    <Viewbox Width="{StaticResource IconSizeLarge}" Height="{StaticResource IconSizeLarge}" HorizontalAlignment="Left">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconSearch}" Stroke="{DynamicResource BrushAccent}"
+                                      StrokeThickness="{StaticResource IconStrokeMedium}"
+                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                            </Canvas>
+                        </Viewbox>
+                    <TextBlock Text="Ищите внутри PDF" FontWeight="{StaticResource FontWeightBold}" Margin="0,4,0,0" />
+                    <TextBlock FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource BrushSecondaryText}" TextWrapping="Wrap" Text="По словам, числам и датам — с подсветкой найденного на страницах." />
                 </StackPanel>
             </Grid>
 
-            <TextBlock Classes="small muted" TextWrapping="Wrap" Margin="0,32,0,0"
+            <TextBlock FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource BrushSecondaryText}"
+                       TextWrapping="Wrap" Margin="0,32,0,0"
                        Text="Без сервера и учетных записей. Документы остаются в своих папках — программа хранит только прочитанный текст и миниатюры." />
         </StackPanel>
     </ScrollViewer>
+    </DockPanel>
 </UserControl>

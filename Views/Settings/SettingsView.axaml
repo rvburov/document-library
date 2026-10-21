@@ -1,48 +1,176 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:c="using:PdfLibrary.Controls"
              xmlns:s="using:PdfLibrary.Views.Settings"
              x:Class="PdfLibrary.Views.Settings.SettingsView"
-             x:DataType="s:SettingsViewModel">
+             x:DataType="s:SettingsViewModel"
+             Background="{DynamicResource BrushBg}">
 
     <!--
-      Экран «Настройки» (макет, доски 5–10): разделы слева с иконками и раздел справа. Все
-      значения действуют сразу — кнопки «Сохранить» нет.
+      Раздел «Настройки» (макет, доски 5–10): список разделов — в боковой панели окна, здесь шапка
+      раздела высотой с навбар и содержимое блоками — заголовок группы, рамка со строками,
+      пояснение под ней. Все значения действуют сразу — кнопки «Сохранить» нет.
     -->
-    <Grid x:Name="Layout" ColumnDefinitions="232,*">
 
-        <Border x:Name="Nav" Grid.Column="0"
-                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineRight}">
-            <DockPanel>
-                <Border DockPanel.Dock="Top" Height="{StaticResource NavbarHeight}" Padding="18,0"
-                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
-                    <TextBlock Text="Настройки" Classes="title" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel x:Name="NavList" Margin="8" Spacing="0" />
-            </DockPanel>
-        </Border>
+    <UserControl.Styles>
+        <!-- Блок настроек: рамка со скруглением, строки внутри разделены линией. -->
+        <Style Selector="Border.group">
+            <Setter Property="Background"      Value="{DynamicResource BrushBg}" />
+            <Setter Property="BorderBrush"     Value="{DynamicResource BrushSeparator}" />
+            <Setter Property="BorderThickness" Value="{DynamicResource BorderLine}" />
+            <Setter Property="CornerRadius"    Value="{StaticResource RadiusLarge}" />
+            <Setter Property="ClipToBounds"    Value="True" />
+        </Style>
+        <Style Selector="Border.srow">
+            <Setter Property="Padding"         Value="14,12" />
+            <Setter Property="BorderBrush"     Value="{DynamicResource BrushSeparator}" />
+            <Setter Property="BorderThickness" Value="{DynamicResource BorderLineTop}" />
+        </Style>
+        <Style Selector="Border.srow:nth-child(1)">
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.srow ToggleSwitch">
+            <Setter Property="OnContent"         Value="" />
+            <Setter Property="OffContent"        Value="" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.srow ComboBox, Border.srow TextBox">
+            <Setter Property="Height"       Value="{StaticResource ControlHeightStandard}" />
+            <Setter Property="Background"   Value="{DynamicResource BrushSecondaryBg}" />
+            <Setter Property="CornerRadius" Value="{StaticResource RadiusBase}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.srow TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,*">
-            <Border Height="{StaticResource NavbarHeight}" Padding="24,0"
-                    BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
-                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                    <TextBlock x:Name="SectionTitle" Classes="title" VerticalAlignment="Center" />
-                    <StackPanel x:Name="DiagActions" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="False">
-                        <Button Theme="{StaticResource SecondaryButton}" CornerRadius="{StaticResource RadiusSmall}"
-                                Click="OnExportLog">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <c:Icon Classes="small" Data="{StaticResource IconDownload}" />
-                                <TextBlock Text="Выгрузить в CSV" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                        <Button Theme="{StaticResource SecondaryButton}" CornerRadius="{StaticResource RadiusSmall}"
-                                Content="Очистить журнал" Click="OnClearLog" />
-                    </StackPanel>
-                </Grid>
-            </Border>
+        <!-- Заголовок группы: «ЗАПУСК И РАБОТА В ФОНЕ». -->
+        <Style Selector="TextBlock.h2">
+            <Setter Property="FontSize"      Value="{DynamicResource FontSizeSmall}" />
+            <Setter Property="FontWeight"    Value="{StaticResource FontWeightBold}" />
+            <Setter Property="Foreground"    Value="{DynamicResource BrushSecondaryText}" />
+            <Setter Property="LetterSpacing" Value="0.2" />
+            <Setter Property="Margin"        Value="2,22,0,8" />
+        </Style>
+        <!-- Пояснение под названием строки и под блоком. -->
+        <Style Selector="TextBlock.desc">
+            <Setter Property="FontSize"     Value="{DynamicResource FontSizeSmall}" />
+            <Setter Property="Foreground"   Value="{DynamicResource BrushSecondaryText}" />
+            <Setter Property="Margin"       Value="0,2,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.note">
+            <Setter Property="FontSize"     Value="{DynamicResource FontSizeSmall}" />
+            <Setter Property="Foreground"   Value="{DynamicResource BrushSecondaryText}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin"       Value="2,8,0,0" />
+        </Style>
+        <Style Selector="TextBlock.small">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+        </Style>
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        </Style>
+        <Style Selector="TextBlock.bold">
+            <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}" />
+        </Style>
 
-            <ScrollViewer x:Name="Scroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-                <Panel MaxWidth="808" HorizontalAlignment="Left" Margin="24,8,24,32">
+        <!-- Ссылка в строке: «Показать еще», «Скопировать», «Обновить». -->
+        <Style Selector="Button.link">
+            <Setter Property="Background"          Value="Transparent" />
+            <Setter Property="BorderThickness"     Value="0" />
+            <Setter Property="Padding"             Value="0" />
+            <Setter Property="Foreground"          Value="{DynamicResource BrushAccent}" />
+            <Setter Property="Cursor"              Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background"                Value="Transparent" />
+            <Setter Property="Foreground"                Value="{DynamicResource BrushAccent}" />
+            <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+        </Style>
+
+        <!-- Строка журнала: подсветка под мышью, раскрытая — голубая. -->
+        <Style Selector="Border.logrow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor"     Value="Hand" />
+        </Style>
+        <Style Selector="Border.logrow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        </Style>
+        <Style Selector="Border.logrow.open">
+            <Setter Property="Background" Value="{DynamicResource BrushAccentLight}" />
+        </Style>
+
+        <!-- Уровень записи журнала — чипом. -->
+        <Style Selector="Border.chip">
+            <Setter Property="CornerRadius" Value="99" />
+        </Style>
+        <Style Selector="Border.chip > TextBlock">
+            <Setter Property="FontSize"   Value="{DynamicResource FontSizeSmall}" />
+            <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}" />
+        </Style>
+        <Style Selector="Border.chip.red">
+            <Setter Property="Background" Value="{DynamicResource BrushRedLight}" />
+        </Style>
+        <Style Selector="Border.chip.red > TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource BrushRed}" />
+        </Style>
+        <Style Selector="Border.chip.orange">
+            <Setter Property="Background" Value="{DynamicResource BrushOrangeLight}" />
+        </Style>
+        <Style Selector="Border.chip.orange > TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource BrushOrange}" />
+        </Style>
+        <Style Selector="Border.chip.gray">
+            <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        </Style>
+        <Style Selector="Border.chip.gray > TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- Шапка раздела: высота навбара, отступ 16 — как у навбара ленты. -->
+        <Grid DockPanel.Dock="Top" Height="56" Margin="16,0" ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="SectionTitle"
+                       VerticalAlignment="Center"
+                       FontSize="{DynamicResource FontSizeLarge}"
+                       FontWeight="{StaticResource FontWeightBold}" />
+            <StackPanel x:Name="DiagActions" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                        VerticalAlignment="Center" IsVisible="False">
+                <Button Classes="navbtn" Width="30" Height="30"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        ToolTip.Tip="Выгрузить в CSV"
+                        Click="OnExportLog">
+                    <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="{StaticResource IconDownload}"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+                <Button Classes="navbtn" Width="30" Height="30"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        ToolTip.Tip="Очистить журнал"
+                        Click="OnClearLog">
+                    <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="{StaticResource IconTrash}"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+            </StackPanel>
+        </Grid>
+        <!-- Линию под шапкой рисует главное окно (на высоте 56 через всю ширину). -->
+
+        <ScrollViewer x:Name="Scroll" HorizontalScrollBarVisibility="Disabled">
+            <Panel MaxWidth="808" HorizontalAlignment="Left" Margin="16,0,16,32">
 
                     <!-- ══ Общее ══════════════════════════════════════════════ -->
                     <StackPanel x:Name="General">
@@ -55,7 +183,7 @@
                                             <TextBlock Text="Запускать при входе в систему" />
                                             <TextBlock Classes="desc" Text="{Binding AutostartDescription}" />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding Autostart}"
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding Autostart}"
                                                       IsEnabled="{Binding AutostartSupported}" />
                                     </Grid>
                                 </Border>
@@ -65,7 +193,7 @@
                                             <TextBlock Text="Работать в фоне при закрытом окне" />
                                             <TextBlock Classes="desc" Text="Закрытие окна сворачивает программу в значок у часов; наблюдение за папками и чтение продолжаются. Выход — через меню значка." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding Background}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding Background}" />
                                     </Grid>
                                 </Border>
                             </StackPanel>
@@ -80,7 +208,7 @@
                                             <TextBlock Text="Новые документы в источниках" />
                                             <TextBlock Classes="desc" Text="Системное уведомление, когда в папках появились новые PDF. Стандартно выключено." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding NotifyNew}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyNew}" />
                                     </Grid>
                                 </Border>
                                 <Border Classes="srow">
@@ -89,7 +217,7 @@
                                             <TextBlock Text="Чтение документов закончено" />
                                             <TextBlock Classes="desc" Text="Уведомление, когда фоновое чтение текста завершилось. Стандартно выключено." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding NotifyRead}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyRead}" />
                                     </Grid>
                                 </Border>
                             </StackPanel>
@@ -114,7 +242,7 @@
                                             <TextBlock Text="Открывать при запуске последний документ" />
                                             <TextBlock Classes="desc" Text="В панели чтения, на той странице, где закончили читать." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding ReopenLast}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding ReopenLast}" />
                                     </Grid>
                                 </Border>
                             </StackPanel>
@@ -125,29 +253,28 @@
                     <StackPanel x:Name="Sources" IsVisible="False">
                         <TextBlock Classes="h2" Text="ПАПКИ С PDF" />
                         <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,8">
-                            <Border Height="30" Padding="8,0" CornerRadius="{StaticResource RadiusSmall}"
+                            <Border Height="30" Padding="8,0"
                                     BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="1" MinWidth="180">
                                 <Grid ColumnDefinitions="Auto,*">
-                                    <c:Icon Classes="small" Data="{StaticResource IconSearch}"
-                                            Foreground="{DynamicResource BrushSecondaryText}" />
-                                    <TextBox x:Name="FolderQuery" Grid.Column="1" Classes="bare" Margin="6,0,0,0"
+                                    <Viewbox Width="14" Height="14" VerticalAlignment="Center"><Canvas Width="24" Height="24"><Path Data="{StaticResource IconSearch}" Stroke="{DynamicResource BrushSecondaryText}" StrokeThickness="{StaticResource IconStrokeSmall}" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
+                                    <TextBox x:Name="FolderQuery" Grid.Column="1" Classes="borderless" BorderThickness="0" Background="Transparent" Margin="6,0,0,0"
                                              Watermark="Найти папку по названию или пути" TextChanged="OnFolderQuery" />
                                 </Grid>
                             </Border>
-                            <Border Grid.Column="1" Classes="segment" Margin="8,0,0,0">
+                            <Border Grid.Column="1" Classes="modeseg" Margin="8,0,0,0" VerticalAlignment="Center">
                                 <StackPanel x:Name="FolderFilters" Orientation="Horizontal" />
                             </Border>
-                            <Button Grid.Column="2" Theme="{StaticResource SecondaryButton}" Margin="8,0,0,0"
-                                    CornerRadius="{StaticResource RadiusSmall}" Click="OnCheckAll">
+                            <Button Grid.Column="2" Classes="dialog auto" Margin="8,0,0,0"
+                                    Click="OnCheckAll">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <c:Icon Classes="small" Data="{StaticResource IconRefresh}" />
+                                    <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}"><Canvas Width="24" Height="24"><Path Data="{StaticResource IconRefresh}" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="{StaticResource IconStrokeMedium}" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
                                     <TextBlock Text="Проверить все" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-                            <Button Grid.Column="3" Theme="{StaticResource PrimaryButton}" Margin="8,0,0,0"
-                                    CornerRadius="{StaticResource RadiusSmall}" Click="OnAddFolder">
+                            <Button Grid.Column="3" Classes="dialog auto accent" Margin="8,0,0,0"
+                                    Click="OnAddFolder">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <c:Icon Classes="small" Data="{StaticResource IconPlus}" />
+                                    <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}"><Canvas Width="24" Height="24"><Path Data="{StaticResource IconPlus}" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="{StaticResource IconStrokeMedium}" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
                                     <TextBlock Text="Добавить папку" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
@@ -156,7 +283,7 @@
                         <Border Classes="group">
                             <StackPanel>
                                 <Border Background="{DynamicResource BrushSecondaryBg}" Padding="14,6"
-                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}">
                                     <Grid ColumnDefinitions="2*,3*,70,170,30">
                                         <TextBlock Text="Название" Classes="small muted bold" />
                                         <TextBlock Grid.Column="1" Text="Путь" Classes="small muted bold" />
@@ -169,22 +296,22 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="s:FolderRow">
                                                 <Border Padding="14,0" Height="36" BorderBrush="{DynamicResource BrushSeparator}"
-                                                        BorderThickness="{StaticResource BorderLineBottom}">
+                                                        BorderThickness="{DynamicResource BorderLineBottom}">
                                                     <Grid ColumnDefinitions="2*,3*,70,170,30" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                                        <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeBase}" TextTrimming="CharacterEllipsis"
                                                                    VerticalAlignment="Center" Margin="0,0,10,0" />
                                                         <TextBlock Grid.Column="1" Text="{Binding Path}" Classes="small muted"
                                                                    TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                                        <TextBlock Grid.Column="2" Text="{Binding CountText}" FontSize="12"
+                                                        <TextBlock Grid.Column="2" Text="{Binding CountText}" FontSize="{DynamicResource FontSizeBase}"
                                                                    TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
                                                         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                             <Ellipse Width="7" Height="7" Fill="{Binding Dot}" VerticalAlignment="Center" />
-                                                            <TextBlock Text="{Binding Status}" FontSize="12" Foreground="{Binding StatusBrush}"
+                                                            <TextBlock Text="{Binding Status}" FontSize="{DynamicResource FontSizeBase}" Foreground="{Binding StatusBrush}"
                                                                        TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
-                                                        <Button Grid.Column="4" Theme="{StaticResource IconButton}"
+                                                        <Button Grid.Column="4" Classes="icon" Width="24" Height="24" CornerRadius="{StaticResource RadiusBase}"
                                                                 ToolTip.Tip="Действия с папкой" Click="OnFolderMenu">
-                                                            <c:Icon Classes="small" Data="{StaticResource IconMore}" />
+                                                            <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}"><Canvas Width="24" Height="24"><Path Data="{StaticResource IconMore}" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="{StaticResource IconStrokeMedium}" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
                                                         </Button>
                                                     </Grid>
                                                 </Border>
@@ -207,7 +334,7 @@
                                             <TextBlock Text="Следить за папками" />
                                             <TextBlock Classes="desc" Text="Новые и измененные PDF появляются в ленте сами, удаленные помечаются «файл не найден»." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding Watch}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding Watch}" />
                                     </Grid>
                                 </Border>
                                 <Border Classes="srow">
@@ -216,7 +343,7 @@
                                             <TextBlock Text="Читать новые документы сразу" />
                                             <TextBlock Classes="desc" Text="Текст для поиска читается в фоне. Выключено — кнопкой «Прочитать» под строкой поиска." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding ReadAuto}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding ReadAuto}" />
                                     </Grid>
                                 </Border>
                                 <Border Classes="srow">
@@ -245,18 +372,18 @@
                         <Border Classes="group" Padding="14,12">
                             <Grid ColumnDefinitions="*,Auto">
                                 <Grid x:Name="CacheGrid" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                                    <TextBlock Grid.Row="0" Text="Прочитано" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CacheRead" FontSize="12" Margin="0,2" />
-                                    <TextBlock Grid.Row="1" Text="Без текстового слоя" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CacheScans" FontSize="12" Margin="0,2" />
-                                    <TextBlock Grid.Row="2" Text="Не прочитались" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CacheFailed" FontSize="12" Margin="0,2" />
-                                    <TextBlock Grid.Row="3" x:Name="CacheBigLabel" Text="Тяжелее порога" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CacheBig" FontSize="12" Margin="0,2" />
-                                    <TextBlock Grid.Row="4" Text="Занято на диске" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="CacheSize" FontSize="12" Margin="0,2" />
+                                    <TextBlock Grid.Row="0" Text="Прочитано" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CacheRead" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
+                                    <TextBlock Grid.Row="1" Text="Без текстового слоя" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CacheScans" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
+                                    <TextBlock Grid.Row="2" Text="Не прочитались" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CacheFailed" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
+                                    <TextBlock Grid.Row="3" x:Name="CacheBigLabel" Text="Тяжелее порога" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CacheBig" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
+                                    <TextBlock Grid.Row="4" Text="Занято на диске" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="CacheSize" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
                                 </Grid>
-                                <Button x:Name="ClearCacheButton" Grid.Column="1" Theme="{StaticResource SecondaryButton}"
+                                <Button x:Name="ClearCacheButton" Grid.Column="1" Classes="dialog auto"
                                         VerticalAlignment="Top" Content="Очистить" Click="OnClearCache" />
                             </Grid>
                         </Border>
@@ -283,7 +410,7 @@
                                             <TextBlock Text="Размер карточки" />
                                             <TextBlock Classes="desc" Text="Высота строки, размер миниатюры и сколько строк найденного текста видно: 1, 3 или 6." />
                                         </StackPanel>
-                                        <Border Grid.Column="1" Classes="segment" VerticalAlignment="Center">
+                                        <Border Grid.Column="1" Classes="modeseg" VerticalAlignment="Center">
                                             <StackPanel x:Name="SizeSegment" Orientation="Horizontal" />
                                         </Border>
                                     </Grid>
@@ -294,7 +421,7 @@
                                             <TextBlock Text="Миниатюра первой страницы" />
                                             <TextBlock Classes="desc" Text="Выключено — на плитке только формат листа и число страниц." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding CardThumbnail}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding CardThumbnail}" />
                                     </Grid>
                                 </Border>
                             </StackPanel>
@@ -309,7 +436,7 @@
                                             <TextBlock Text="Где лежит файл" />
                                             <TextBlock Classes="desc" Text="Строка под названием: источник, папка и имя файла." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding CardPath}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding CardPath}" />
                                     </Grid>
                                 </Border>
                                 <Border Classes="srow">
@@ -318,7 +445,7 @@
                                             <TextBlock Text="Размер и страницы" />
                                             <TextBlock Classes="desc" Text="Справа внизу: «3,1 МБ · 48 стр. · A4 × 48»." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding CardMeta}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding CardMeta}" />
                                     </Grid>
                                 </Border>
                                 <Border Classes="srow">
@@ -327,7 +454,7 @@
                                             <TextBlock Text="Тип документа" />
                                             <TextBlock Classes="desc" Text="Голубая метка справа: Руководство, Чертеж, ГОСТ." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding CardType}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding CardType}" />
                                     </Grid>
                                 </Border>
                             </StackPanel>
@@ -342,7 +469,7 @@
                                             <TextBlock Text="Документы, которых нет на диске" />
                                             <TextBlock Classes="desc" Text="Показывать с пометкой «файл не найден». Выключено — такие документы скрыты из ленты." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding FeedMissing}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding FeedMissing}" />
                                     </Grid>
                                 </Border>
                                 <Border Classes="srow">
@@ -351,7 +478,7 @@
                                             <TextBlock Text="Сканы без текстового слоя" />
                                             <TextBlock Classes="desc" Text="Показывать с пометкой «скан, без текста». Найти их можно только по названию и имени файла." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding FeedScans}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding FeedScans}" />
                                     </Grid>
                                 </Border>
                             </StackPanel>
@@ -373,7 +500,7 @@
                                             <TextBlock Text="Масштаб интерфейса" />
                                             <TextBlock Classes="desc" Text="Меняет размер всего окна вместе с текстом и кнопками." />
                                         </StackPanel>
-                                        <Border Grid.Column="1" Classes="segment" VerticalAlignment="Center">
+                                        <Border Grid.Column="1" Classes="modeseg" VerticalAlignment="Center">
                                             <StackPanel x:Name="ScaleSegment" Orientation="Horizontal" />
                                         </Border>
                                     </Grid>
@@ -384,7 +511,7 @@
                                             <TextBlock Text="Размер шрифта" />
                                             <TextBlock Classes="desc" Text="Только текст; карточки подстраиваются под него сами." />
                                         </StackPanel>
-                                        <Border Grid.Column="1" Classes="segment" VerticalAlignment="Center">
+                                        <Border Grid.Column="1" Classes="modeseg" VerticalAlignment="Center">
                                             <StackPanel x:Name="FontSegment" Orientation="Horizontal" />
                                         </Border>
                                     </Grid>
@@ -404,10 +531,10 @@
 
                     <!-- ══ Диагностика ════════════════════════════════════════ -->
                     <StackPanel x:Name="Diagnostics" IsVisible="False">
-                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,14,0,10"
+                        <TextBlock Classes="muted" FontSize="{DynamicResource FontSizeBase}" TextWrapping="Wrap" Margin="0,14,0,10"
                                    Text="Журнал работы программы: запуск, проверка папок, чтение документов и ошибки. Если что-то пошло не так, выгрузите журнал и приложите к обращению." />
                         <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
-                            <Border Classes="segment">
+                            <Border Classes="modeseg">
                                 <StackPanel x:Name="LevelSegment" Orientation="Horizontal" />
                             </Border>
                             <TextBlock x:Name="LogCount" Grid.Column="1" Classes="small muted" Margin="12,0,0,0"
@@ -416,7 +543,7 @@
                         <Border Classes="group">
                             <StackPanel>
                                 <Border Background="{DynamicResource BrushSecondaryBg}" Padding="14,6"
-                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}">
                                     <Grid ColumnDefinitions="130,130,*">
                                         <TextBlock Text="Время" Classes="small muted bold" />
                                         <TextBlock Grid.Column="1" Text="Уровень" Classes="small muted bold" />
@@ -427,8 +554,8 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="s:LogRowView">
                                             <StackPanel>
-                                                <Button Theme="{StaticResource RowButton}" Height="34" CornerRadius="0" Padding="14,0"
-                                                        Click="OnLogRowClick" Classes.on="{Binding IsOpen}">
+                                                <Border Classes="logrow" Classes.open="{Binding IsOpen}" Height="34" Padding="14,0"
+                                                        Tapped="OnLogRowTapped">
                                                     <Grid ColumnDefinitions="130,130,*">
                                                         <TextBlock Text="{Binding Time}" Classes="small muted" VerticalAlignment="Center" />
                                                         <Border Grid.Column="1" Classes="chip" Classes.red="{Binding IsError}"
@@ -436,18 +563,18 @@
                                                                 HorizontalAlignment="Left" Padding="8,2">
                                                             <TextBlock Text="{Binding Level}" />
                                                         </Border>
-                                                        <TextBlock Grid.Column="2" Text="{Binding Message}" FontSize="12"
+                                                        <TextBlock Grid.Column="2" Text="{Binding Message}" FontSize="{DynamicResource FontSizeBase}"
                                                                    TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                     </Grid>
-                                                </Button>
+                                                </Border>
                                                 <Border IsVisible="{Binding IsOpen}" Padding="14,10" Background="{DynamicResource BrushInactiveBg}"
-                                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}">
                                                     <StackPanel Spacing="6">
-                                                        <SelectableTextBlock Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" />
+                                                        <SelectableTextBlock Text="{Binding Message}" FontSize="{DynamicResource FontSizeBase}" TextWrapping="Wrap" />
                                                         <SelectableTextBlock Text="{Binding Detail}" Classes="small" TextWrapping="Wrap"
                                                                              Foreground="{DynamicResource BrushSecondaryText}"
                                                                              IsVisible="{Binding HasDetail}" />
-                                                        <Button Theme="{StaticResource LinkButton}" Content="Скопировать" FontSize="12"
+                                                        <Button Classes="link" Content="Скопировать" FontSize="{DynamicResource FontSizeBase}"
                                                                 Click="OnCopyLog" />
                                                     </StackPanel>
                                                 </Border>
@@ -457,7 +584,7 @@
                                 </ItemsControl>
                                 <TextBlock x:Name="NoLogs" Classes="small muted" Margin="14,12" IsVisible="False"
                                            Text="Записей нет." />
-                                <Button x:Name="MoreLogs" Theme="{StaticResource LinkButton}" FontSize="12" Margin="14,10"
+                                <Button x:Name="MoreLogs" Classes="link" FontSize="{DynamicResource FontSizeBase}" Margin="14,10"
                                         Content="Показать еще" Click="OnMoreLogs" IsVisible="False" />
                             </StackPanel>
                         </Border>
@@ -473,7 +600,7 @@
                                     <TextBlock Text="Библиотека PDF" FontSize="18" FontWeight="SemiBold" />
                                     <TextBlock x:Name="VersionText" Classes="small muted" />
                                     <TextBlock Classes="desc" Margin="0,4,0,0"
-                                               Text="Поиск и чтение PDF-документов. Самостоятельная версия раздела «Библиотека документов» из SmartBase." />
+                                               Text="Поиск и чтение PDF-документов из папок на диске и в сети." />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -490,15 +617,14 @@
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBox Text="{Binding UpdateFolder}" Watermark="Например, \\srv-01\soft\PdfLibrary"
                                                      LostFocus="OnUpdateFolderLostFocus" />
-                                            <Button x:Name="CheckUpdateButton" Grid.Column="1" Theme="{StaticResource SecondaryButton}"
-                                                    Margin="8,0,0,0" CornerRadius="{StaticResource RadiusSmall}"
+                                            <Button x:Name="CheckUpdateButton" Grid.Column="1" Classes="dialog auto"
+                                                    Margin="8,0,0,0"
                                                     Content="Проверить" Click="OnCheckUpdate" />
                                         </Grid>
                                         <StackPanel x:Name="UpdateStatus" Orientation="Horizontal" Spacing="6" IsVisible="False">
-                                            <c:Icon x:Name="UpdateIcon" Classes="small" Data="{StaticResource IconCheck}"
-                                                    Foreground="{DynamicResource BrushGreen}" />
-                                            <TextBlock x:Name="UpdateText" FontSize="12" TextWrapping="Wrap" />
-                                            <Button x:Name="ApplyUpdateButton" Theme="{StaticResource LinkButton}" FontSize="12"
+                                            <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}" x:Name="UpdateIcon" VerticalAlignment="Center"><Canvas Width="24" Height="24"><Path Data="{StaticResource IconCheck}" Stroke="{DynamicResource BrushGreen}" StrokeThickness="{StaticResource IconStrokeMediumBold}" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
+                                            <TextBlock x:Name="UpdateText" FontSize="{DynamicResource FontSizeBase}" TextWrapping="Wrap" />
+                                            <Button x:Name="ApplyUpdateButton" Classes="link" FontSize="{DynamicResource FontSizeBase}"
                                                     Content="Обновить" Click="OnApplyUpdate" IsVisible="False" Margin="8,0,0,0" />
                                         </StackPanel>
                                     </StackPanel>
@@ -509,7 +635,7 @@
                                             <TextBlock Text="Автообновление" />
                                             <TextBlock Classes="desc" Text="Новая версия ставится сама при следующем запуске программы." />
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" Theme="{StaticResource Switch}" IsChecked="{Binding AutoUpdate}" />
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoUpdate}" />
                                     </Grid>
                                 </Border>
                             </StackPanel>
@@ -519,11 +645,11 @@
                         <Border Classes="group" Padding="14,12">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Margin="0,0,16,0">
-                                    <SelectableTextBlock x:Name="DataDirText" FontSize="12" TextWrapping="Wrap" />
+                                    <SelectableTextBlock x:Name="DataDirText" FontSize="{DynamicResource FontSizeBase}" TextWrapping="Wrap" />
                                     <TextBlock Classes="desc"
                                                Text="library.db — источники, группы и метки; library-cache.db — прочитанный текст для поиска; thumbs — миниатюры; logs.db — журнал." />
                                 </StackPanel>
-                                <Button Grid.Column="1" Theme="{StaticResource SecondaryButton}" VerticalAlignment="Center"
+                                <Button Grid.Column="1" Classes="dialog auto" VerticalAlignment="Center"
                                         Content="Открыть" Click="OnOpenDataDir" />
                             </Grid>
                         </Border>
@@ -531,17 +657,16 @@
                         <TextBlock Classes="h2" Text="СИСТЕМА" />
                         <Border Classes="group" Padding="14,12">
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
-                                <TextBlock Text="Операционная система" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                <TextBlock x:Name="OsText" Grid.Column="1" FontSize="12" Margin="0,2" />
-                                <TextBlock Grid.Row="1" Text="Платформа" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                <TextBlock x:Name="PlatformText" Grid.Row="1" Grid.Column="1" FontSize="12" Margin="0,2" />
-                                <TextBlock Grid.Row="2" Text="Библиотека" Classes="muted" FontSize="12" Margin="0,2,24,2" />
-                                <TextBlock x:Name="LibraryText" Grid.Row="2" Grid.Column="1" FontSize="12" Margin="0,2" />
+                                <TextBlock Text="Операционная система" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                <TextBlock x:Name="OsText" Grid.Column="1" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
+                                <TextBlock Grid.Row="1" Text="Платформа" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                <TextBlock x:Name="PlatformText" Grid.Row="1" Grid.Column="1" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
+                                <TextBlock Grid.Row="2" Text="Библиотека" Classes="muted" FontSize="{DynamicResource FontSizeBase}" Margin="0,2,24,2" />
+                                <TextBlock x:Name="LibraryText" Grid.Row="2" Grid.Column="1" FontSize="{DynamicResource FontSizeBase}" Margin="0,2" />
                             </Grid>
                         </Border>
                     </StackPanel>
-                </Panel>
-            </ScrollViewer>
-        </Grid>
-    </Grid>
+            </Panel>
+        </ScrollViewer>
+    </DockPanel>
 </UserControl>

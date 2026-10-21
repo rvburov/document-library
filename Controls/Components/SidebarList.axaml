@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PdfLibrary.Controls.Components.SidebarList"
+             Background="{DynamicResource BrushBg}">
+
+    <UserControl.Styles>
+        <!-- Строка списка — подсветка во всю ширину без скруглений, hover/selected. -->
+        <Style Selector="Border.navrow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor"     Value="Hand" />
+        </Style>
+        <Style Selector="Border.navrow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        </Style>
+        <Style Selector="Border.navrow.selected, Border.navrow.selected:pointerover">
+            <Setter Property="Background" Value="{DynamicResource BrushAccentLight}" />
+        </Style>
+
+        <!-- Невыбранная: темный текст + серая иконка. Выбранная: синий текст и иконка. -->
+        <Style Selector="Border.navrow TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource BrushPrimaryText}" />
+        </Style>
+        <Style Selector="Border.navrow Path">
+            <Setter Property="Stroke" Value="{DynamicResource BrushSecondaryText}" />
+        </Style>
+        <Style Selector="Border.navrow.selected TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+        </Style>
+        <Style Selector="Border.navrow.selected Path">
+            <Setter Property="Stroke" Value="{DynamicResource BrushAccent}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- Заголовок раздела (высота 56, отступ 16 — как у навбаров) -->
+        <Border DockPanel.Dock="Top" Height="56" Padding="16,0">
+            <TextBlock x:Name="TitleText"
+                       VerticalAlignment="Center"
+                       FontSize="{DynamicResource FontSizeLarge}"
+                       FontWeight="{StaticResource FontWeightBold}"
+ />
+        </Border>
+
+        <!-- Пункты: строки строятся в code-behind из SetItems -->
+        <StackPanel x:Name="RowsHost" />
+
+    </DockPanel>
+
+</UserControl>

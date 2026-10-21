@@ -55,8 +55,15 @@ public partial class NewTagDialog : DialogBase
                 BorderThickness = new Thickness(on ? 2 : 0),
                 Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
             };
-            swatch.Theme = Res.Theme("ButtonCore");
-            swatch.Background = new SolidColorBrush(Color.Parse(color));
+            // Свой шаблон: кнопка Fluent перекрашивает фон при наведении, а образец цвета обязан
+            // оставаться своего цвета.
+            swatch.Template = new Avalonia.Controls.Templates.FuncControlTemplate<Button>((b, _) => new Border
+            {
+                [!Border.BackgroundProperty]      = b[!BackgroundProperty],
+                [!Border.BorderBrushProperty]     = b[!BorderBrushProperty],
+                [!Border.BorderThicknessProperty] = b[!BorderThicknessProperty],
+                [!Border.CornerRadiusProperty]    = b[!CornerRadiusProperty],
+            });
             if (on) swatch.BorderBrush = Res.Brush("BrushPrimaryText");
             ToolTip.SetTip(swatch, label);
             swatch.Click += (_, _) => { _color = color; BuildSwatches(); };

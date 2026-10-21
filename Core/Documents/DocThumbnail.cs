@@ -163,9 +163,6 @@ public static class DocThumbnail
         // отдает 335. Холст на 336 при таких данных разъезжает ровно на пиксель в КАЖДОЙ строке —
         // картинка уходит по диагонали, снизу остается черный клин. На сплошном скане это видно
         // сразу, на обычном текстовом листе почти нет, потому дефект и дожил до ленты.
-        //
-        // Тот же порядок у расширения «Водяной знак» (WatermarkStamp.StampPage) — там холст
-        // изначально строится по GetPageWidth/GetPageHeight.
         var width  = page.GetPageWidth();
         var height = page.GetPageHeight();
         if (width <= 0 || height <= 0) return [];

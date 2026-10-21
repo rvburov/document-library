@@ -5,9 +5,9 @@ EF Core/SQLite с FTS5). Документация — для разработч�
 Встроенной инструкции пользователя нет (решение по [infrastructure.md](infrastructure.md),
 вопрос 3).
 
-Планы развития — [ROADMAP.md](ROADMAP.md). Согласованный макет — [mockup.md](mockup.md), что
-взято из SmartBase — [infrastructure.md](infrastructure.md). Правила для ИИ-агентов —
-[AGENTS.md](../AGENTS.md).
+Планы развития — [ROADMAP.md](ROADMAP.md). Согласованный макет — [mockup.md](mockup.md),
+инфраструктура разработки и принятые решения — [infrastructure.md](infrastructure.md). Правила для
+ИИ-агентов — [AGENTS.md](../AGENTS.md).
 
 ---
 

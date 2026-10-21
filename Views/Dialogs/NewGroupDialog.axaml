@@ -3,28 +3,31 @@
               xmlns:d="using:PdfLibrary.Views.Dialogs"
               x:Class="PdfLibrary.Views.Dialogs.NewGroupDialog">
 
-    <!-- Макет: «Кнопка «+»: меню и окна» → «Группа источников». -->
+    <!-- «Группа источников». -->
     <StackPanel>
         <TextBlock Text="Группа собирает несколько источников под одним названием в боковой панели. Папки на диске не меняются."
-                   Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
+                   Foreground="{DynamicResource BrushSecondaryText}" TextWrapping="Wrap" Margin="0,0,0,14" />
 
-        <TextBlock Text="Название группы" FontSize="12" Margin="0,14,0,6" />
-        <TextBox x:Name="NameBox" Watermark="Например, Объект №1" TextChanged="OnNameChanged" />
+        <TextBlock Text="Название группы" Margin="0,0,0,6" FontWeight="{StaticResource FontWeightBold}" Foreground="{DynamicResource BrushSecondaryText}" />
+        <TextBox x:Name="NameBox" Watermark="Например, Объект №1" Margin="0,0,0,12"
+                 Height="34" VerticalContentAlignment="Center" CornerRadius="{StaticResource RadiusMedium}"
+                 TextChanged="OnNameChanged" />
 
-        <TextBlock Text="Источники в группе" FontSize="12" Margin="0,14,0,6" />
-        <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMedium}" Padding="4">
+        <TextBlock Text="Источники в группе" Margin="0,0,0,6" FontWeight="{StaticResource FontWeightBold}" Foreground="{DynamicResource BrushSecondaryText}" />
+        <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLine}"
+                CornerRadius="{StaticResource RadiusBase}" Padding="8,4" Margin="0,0,0,12">
             <ScrollViewer MaxHeight="260" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="SourceList" />
             </ScrollViewer>
         </Border>
         <TextBlock x:Name="NoSources" Text="Источников пока нет — группу можно создать и наполнить потом."
-                   Classes="small muted" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="False" />
+                   FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource BrushSecondaryText}"
+                   TextWrapping="Wrap" Margin="0,0,0,12" IsVisible="False" />
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,20,0,0">
-            <Button Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
-            <Button x:Name="CreateButton" Theme="{StaticResource PrimaryButton}" Content="Создать"
+        <Grid ColumnDefinitions="*,Auto,8,Auto" Margin="0,4,0,0">
+            <Button Grid.Column="1" Classes="dialog" Content="Отмена" Click="OnCancel" />
+            <Button Grid.Column="3" x:Name="CreateButton" Classes="dialog" Content="Создать"
                     Click="OnCreate" IsEnabled="False" />
-        </StackPanel>
+        </Grid>
     </StackPanel>
 </d:DialogBase>

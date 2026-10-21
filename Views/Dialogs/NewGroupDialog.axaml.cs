@@ -27,14 +27,17 @@ public partial class NewGroupDialog : DialogBase
             var note = groups.FirstOrDefault(g => g.Id == source.GroupId) is { } g ? $"сейчас в «{g.Name}»" : "";
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
             row.Children.Add(new TextBlock { Text = source.Name, TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis });
-            var hint = new TextBlock { Text = note, Margin = new Avalonia.Thickness(6, 0, 8, 0) };
-            hint.Classes.Add("small");
-            hint.Classes.Add("muted");
+            var hint = new TextBlock
+            {
+                Text = note, Margin = new Avalonia.Thickness(6, 0, 8, 0),
+                Foreground = Res.Brush("BrushSecondaryText"),
+            };
+            hint.Bind(TextBlock.FontSizeProperty, hint.GetResourceObservable("FontSizeSmall"));
             Grid.SetColumn(hint, 1);
             row.Children.Add(hint);
             var box = new CheckBox
             {
-                Content = row, Height = 30, Margin = new Avalonia.Thickness(8, 0, 0, 0),
+                Content = row, Height = 30,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
             _boxes.Add((source.Id, box));

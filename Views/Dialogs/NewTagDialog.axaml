@@ -3,20 +3,22 @@
               xmlns:d="using:PdfLibrary.Views.Dialogs"
               x:Class="PdfLibrary.Views.Dialogs.NewTagDialog">
 
-    <!-- Макет: «Кнопка «+»: меню и окна» → «Метка». -->
+    <!-- «Метка». -->
     <StackPanel>
-        <TextBlock Text="Название метки" FontSize="12" Margin="0,10,0,6" />
-        <TextBox x:Name="NameBox" Watermark="Например, Насосная станция" TextChanged="OnNameChanged" />
+        <TextBlock Text="Название метки" Margin="0,0,0,6" FontWeight="{StaticResource FontWeightBold}" Foreground="{DynamicResource BrushSecondaryText}" />
+        <TextBox x:Name="NameBox" Watermark="Например, Насосная станция" Margin="0,0,0,12"
+                 Height="34" VerticalContentAlignment="Center" CornerRadius="{StaticResource RadiusMedium}"
+                 TextChanged="OnNameChanged" />
 
-        <TextBlock Text="Цвет" FontSize="12" Margin="0,14,0,6" />
-        <StackPanel x:Name="Swatches" Orientation="Horizontal" Spacing="10" />
+        <TextBlock Text="Цвет" Margin="0,0,0,6" FontWeight="{StaticResource FontWeightBold}" Foreground="{DynamicResource BrushSecondaryText}" />
+        <StackPanel x:Name="Swatches" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12" />
 
-        <CheckBox x:Name="ApplyBox" Margin="0,16,0,0" IsChecked="True" IsVisible="False" />
+        <CheckBox x:Name="ApplyBox" Margin="0,0,0,12" IsChecked="True" IsVisible="False" />
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,20,0,0">
-            <Button Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
-            <Button x:Name="CreateButton" Theme="{StaticResource PrimaryButton}" Content="Создать"
+        <Grid ColumnDefinitions="*,Auto,8,Auto" Margin="0,4,0,0">
+            <Button Grid.Column="1" Classes="dialog" Content="Отмена" Click="OnCancel" />
+            <Button Grid.Column="3" x:Name="CreateButton" Classes="dialog" Content="Создать"
                     Click="OnCreate" IsEnabled="False" />
-        </StackPanel>
+        </Grid>
     </StackPanel>
 </d:DialogBase>

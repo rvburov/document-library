@@ -15,7 +15,7 @@ public enum UpdateCheck { UpToDate, Available, Error }
 public sealed record UpdateInfo(UpdateCheck Result, string Message, string? Artifact = null, Version? Remote = null);
 
 /// <summary>
-/// Обновление из папки — как в SmartBase: в общей папке сети лежит <c>PdfLibrary-Setup</c> (или
+/// Обновление из папки: в общей папке сети лежит <c>PdfLibrary-Setup</c> (или
 /// <c>PdfLibrary</c>) новой версии, программа сравнивает его со своей версией, копирует во
 /// временную папку и запускает копию с <c>--apply-update</c>. Копия ждет выхода старого процесса,
 /// заменяет файл программы собой и запускает программу заново (<see cref="Program"/>).

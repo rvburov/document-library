@@ -1,10 +1,10 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
-using PdfLibrary.Controls;
 
 namespace PdfLibrary.Views.Dialogs;
 
@@ -28,10 +28,24 @@ public sealed class DialogHost : Panel
         scrim.Bind(Border.BackgroundProperty, this.GetResourceObservable("BrushScrim"));
         Children.Add(scrim);
 
-        _title = new TextBlock { FontSize = 16, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-        var close = new Button { Content = new Icon { Width = 16, Height = 16 }, Width = 26, Height = 26 };
-        ((Icon)close.Content).Bind(Icon.DataProperty, close.GetResourceObservable("IconClose"));
-        close.Bind(ThemeProperty, close.GetResourceObservable("IconButton"));
+        // Заголовок и крестик: крупный жирный текст, кнопка
+        // класса icon с обводочной иконкой.
+        _title = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 14) };
+        _title.Bind(TextBlock.FontSizeProperty, _title.GetResourceObservable("FontSizeMedium"));
+        _title.Bind(TextBlock.FontWeightProperty, _title.GetResourceObservable("FontWeightBold"));
+        var glyph = new Avalonia.Controls.Shapes.Path
+        {
+            StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round,
+        };
+        glyph.Bind(Avalonia.Controls.Shapes.Path.DataProperty, glyph.GetResourceObservable("IconClose"));
+        glyph.Bind(Avalonia.Controls.Shapes.Shape.StrokeThicknessProperty, glyph.GetResourceObservable("IconStrokeMedium"));
+        var close = new Button
+        {
+            Width = 26, Height = 26, VerticalAlignment = VerticalAlignment.Top,
+            Content = new Viewbox { Width = 16, Height = 16, Child = new Canvas { Width = 24, Height = 24, Children = { glyph } } },
+        };
+        close.Classes.Add("icon");
+        glyph.Bind(Avalonia.Controls.Shapes.Shape.StrokeProperty, close.GetObservable(TemplatedControl.ForegroundProperty));
         ToolTip.SetTip(close, "Закрыть");
         close.Click += (_, _) => _current?.Close();
 
@@ -48,8 +62,8 @@ public sealed class DialogHost : Panel
 
         _card = new Border
         {
-            Width = 460,
-            MaxWidth = 460,
+            Width = 520,
+            MaxWidth = 520,
             Padding = new Thickness(20, 16),
             CornerRadius = new CornerRadius(12),
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -59,6 +73,8 @@ public sealed class DialogHost : Panel
             Child = new ScrollViewer { Content = stack, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled },
         };
         _card.Bind(Border.BackgroundProperty, this.GetResourceObservable("BrushBg"));
+        _card.Bind(Border.BorderBrushProperty, this.GetResourceObservable("BrushSeparator"));
+        _card.Bind(Border.BorderThicknessProperty, this.GetResourceObservable("BorderLine"));
         Children.Add(_card);
 
         KeyDown += (_, e) =>

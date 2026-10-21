@@ -1,18 +1,19 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PdfLibrary.Views.Dialogs.ConfirmDialog"
-        Width="{StaticResource DialogWidthBase}" SizeToContent="Height"
+        Width="{StaticResource DialogWidthCompact}" SizeToContent="Height"
+        Background="{DynamicResource BrushBg}"
         CanResize="False" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Title="Библиотека PDF">
 
     <!-- Отдельное окно подтверждения — для установщика, у которого нет главного окна. Внутри
          программы подтверждения идут панелью поверх окна (Views/Dialogs/DialogHost). -->
-    <StackPanel Margin="20,18" Spacing="20">
+    <StackPanel Margin="{StaticResource DialogPadding}" Spacing="16">
         <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button x:Name="CancelButton" Theme="{StaticResource SecondaryButton}" Content="Отмена" Click="OnCancel" />
-            <Button x:Name="OkButton" Theme="{StaticResource PrimaryButton}" Content="OK" Click="OnOk" IsDefault="True" />
-        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto,8,Auto">
+            <Button Grid.Column="1" x:Name="CancelButton" Classes="dialog" Content="Отмена" Click="OnCancel" />
+            <Button Grid.Column="3" x:Name="OkButton" Classes="dialog" Content="OK" Click="OnOk" IsDefault="True" />
+        </Grid>
     </StackPanel>
 </Window>

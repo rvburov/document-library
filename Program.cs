@@ -166,7 +166,7 @@ internal sealed class Program
     //
     // Сбой здесь стоит дорого: приложение стартует как ни в чем не бывало, значок-счетчик
     // растет, а баннеров нет — и понять это снаружи нечем. Поэтому и удача, и провал попадают
-    // в logs.db (AppLog.Init уже отработал выше, в App-режиме). Ровно так в SmartBase пряталась
+    // в logs.db (AppLog.Init уже отработал выше, в App-режиме). Ровно так прячется
     // поломка Windows-тостов: под таргетом без WinRT менеджер падал с TypeLoadException, а catch молчал.
     private static DesktopNotifications.INotificationManager? CreateNotificationManager()
     {

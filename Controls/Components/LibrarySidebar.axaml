@@ -1,0 +1,232 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:comp="using:PdfLibrary.Controls.Components"
+             x:Class="PdfLibrary.Controls.Components.LibrarySidebar"
+             Background="{DynamicResource BrushBg}">
+
+  <!-- Боковая панель ленты: тулбар высотой с навбар и
+       плоский список строк высотой строки таблицы. Строки — группы и источники, ниже узел
+       «Метки» с метками-фильтрами. -->
+  <Border>
+    <DockPanel>
+
+        <!-- Тулбар: создать + развернуть/свернуть + включить/выключить все + проверить папки -->
+        <Border DockPanel.Dock="Top"
+                Height="56"
+                Padding="10,13">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+
+                <!-- Создать: источник, группа источников, метка -->
+                <Button x:Name="CreateBtn" Classes="navbtn"
+                        Width="30" Height="30"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        ToolTip.Tip="Создать">
+                    <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="{StaticResource IconPlus}"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMediumBold}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+                <!-- Развернуть/свернуть все -->
+                <ToggleButton x:Name="ExpandBtn" Classes="navbtn"
+                              Width="30" Height="30"
+                              CornerRadius="{StaticResource RadiusMedium}"
+                              ToolTip.Tip="Развернуть все">
+                    <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}">
+                        <Canvas Width="24" Height="24">
+                            <Path x:Name="ExpandIcon"
+                                  Data="{StaticResource IconExpandAll}"
+                                  Stroke="{Binding $parent[ToggleButton].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                            <Path x:Name="CollapseIcon"
+                                  IsVisible="False"
+                                  Data="{StaticResource IconCollapseAll}"
+                                  Stroke="{Binding $parent[ToggleButton].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </ToggleButton>
+
+                <!-- Включить/выключить все источники -->
+                <Button x:Name="ToggleAllBtn" Classes="navbtn"
+                        Width="30" Height="30"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        ToolTip.Tip="Включить все">
+                    <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="{StaticResource IconSquareCheck}"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+                <!-- Проверить папки на новые файлы -->
+                <Button x:Name="CheckBtn" Classes="navbtn"
+                        Width="30" Height="30"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        ToolTip.Tip="Проверить папки">
+                    <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="{StaticResource IconRefresh}"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+            </StackPanel>
+        </Border>
+
+        <Panel>
+            <!-- Источников нет: подсказка вместо пустого места. -->
+            <TextBlock x:Name="EmptyHint"
+                       Text="Нажмите «+», чтобы добавить папку с PDF."
+                       Foreground="{DynamicResource BrushSecondaryText}"
+                       FontSize="{DynamicResource FontSizeSmall}"
+                       TextWrapping="Wrap"
+                       Margin="16,8"
+                       IsVisible="False" />
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Background="Transparent"
+                          ContextRequested="OnEmptyContextRequested">
+                <!-- UseLayoutRounding отключается при зуме≠1 (тот же токен, что у линий таблиц): иначе
+                     округление раздувает толщину линии-разделителя и копит сдвиг строк вниз. -->
+                <ItemsControl x:Name="RowsHost" Padding="0"
+                              UseLayoutRounding="{DynamicResource LineUseLayoutRounding}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="comp:LibrarySidebarRow">
+                            <!-- Строка дерева: контент высотой строки
+                                 таблицы (RowHeightTable), под ним белая линия-разделитель толщиной
+                                 SeparatorThickness (ровно 1 физ. пиксель при любом зуме). У первой
+                                 строки линия лежит поверх контента — ее высота ровно как у ячейки. -->
+                            <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="{Binding LineRowHeight}" />
+                            </Grid.RowDefinitions>
+                            <Border x:Name="RowRoot"
+                                    Grid.Row="0"
+                                    Background="{Binding RowBackground}"
+                                    Padding="10,0,0,0"
+                                    Height="{Binding RowContentHeight}"
+                                    MinHeight="{DynamicResource RowHeightTable}"
+                                    Tapped="OnRowTapped"
+                                    PointerEntered="OnRowEnter"
+                                    PointerExited="OnRowExit"
+                                    ContextRequested="OnRowContextRequested">
+                                <Grid VerticalAlignment="Stretch"
+                                      ColumnDefinitions="Auto,Auto,Auto,*"
+                                      Margin="{Binding IndentMargin}">
+
+                                    <!-- Слот стрелки (chevron): 22 у раскрываемых, 0 у остальных -->
+                                    <Border Grid.Column="0"
+                                            Width="{Binding ChevronSlot}"
+                                            VerticalAlignment="Stretch"
+                                            Background="Transparent"
+                                            Tapped="OnChevronTapped">
+                                        <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}"
+                                                 VerticalAlignment="Center"
+                                                 HorizontalAlignment="Center"
+                                                 IsVisible="{Binding ShowChevron}">
+                                            <Canvas Width="24" Height="24">
+                                                <Path Data="{Binding ChevronGeometry}"
+                                                      Stroke="{DynamicResource BrushSecondaryText}"
+                                                      StrokeThickness="{StaticResource IconStrokeSmall}"
+                                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                                            </Canvas>
+                                        </Viewbox>
+                                    </Border>
+
+                                    <!-- Слот чекбокса: только у источников; иначе 0 -->
+                                    <Border Grid.Column="1"
+                                            Width="{Binding CheckboxSlot}"
+                                            VerticalAlignment="Stretch"
+                                            Background="Transparent"
+                                            Tapped="OnCheckboxTapped">
+                                        <Border Width="{StaticResource CheckBoxSize}"
+                                                Height="{StaticResource CheckBoxSize}"
+                                                VerticalAlignment="Center"
+                                                HorizontalAlignment="Center"
+                                                CornerRadius="{StaticResource CheckBoxRadius}"
+                                                IsVisible="{Binding ShowCheckbox}"
+                                                Background="{Binding CheckFill}"
+                                                BorderBrush="{Binding CheckBorder}"
+                                                BorderThickness="{DynamicResource BorderLine}">
+                                            <Viewbox Width="{StaticResource CheckBoxGlyphSize}"
+                                                     Height="{StaticResource CheckBoxGlyphSize}"
+                                                     IsVisible="{Binding Checked}">
+                                                <Canvas Width="24" Height="24">
+                                                    <Path Data="{StaticResource CheckBoxGlyphGeometry}"
+                                                          Stroke="White"
+                                                          StrokeThickness="{StaticResource CheckBoxGlyphThickness}"
+                                                          StrokeLineCap="Round" StrokeJoin="Round" />
+                                                </Canvas>
+                                            </Viewbox>
+                                        </Border>
+                                    </Border>
+
+                                    <!-- Иконка группы/источника/метки -->
+                                    <Viewbox Grid.Column="2" Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}"
+                                             Margin="2,0,0,0"
+                                             VerticalAlignment="Center"
+                                             HorizontalAlignment="Center">
+                                        <Canvas Width="24" Height="24">
+                                            <Path Data="{Binding IconGeometry}"
+                                                  Stroke="{Binding IconBrush}"
+                                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                                        </Canvas>
+                                    </Viewbox>
+
+                                    <!-- Имя (+ статусная строка у источника: «читаю папку…», «недоступна…») -->
+                                    <StackPanel Grid.Column="3"
+                                                VerticalAlignment="Center"
+                                                Margin="6,4,8,4"
+                                                Spacing="1">
+                                        <TextBlock Text="{Binding Name}"
+                                                   Foreground="{Binding NameBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Status}"
+                                                   IsVisible="{Binding HasStatus}"
+                                                   Foreground="{Binding StatusBrush}"
+                                                   FontSize="{DynamicResource FontSizeSmall}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <!-- Линия-разделитель: белая (цвет фона), aliased, толщина = компенсированный
+                                 SeparatorThickness (1 физ. пиксель), на всю ширину. -->
+                            <Rectangle Grid.Row="{Binding LineGridRow}"
+                                       Fill="{DynamicResource BrushBg}"
+                                       Height="{DynamicResource SeparatorThickness}"
+                                       VerticalAlignment="Bottom"
+                                       UseLayoutRounding="{DynamicResource LineUseLayoutRounding}"
+                                       RenderOptions.EdgeMode="Aliased"
+                                       IsHitTestVisible="False" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Panel>
+
+    </DockPanel>
+  </Border>
+
+</UserControl>

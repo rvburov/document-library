@@ -3,13 +3,17 @@
              x:Class="PdfLibrary.App"
              RequestedThemeVariant="Light">
 
+    <!-- Стили программы: порядок важен — словари ресурсов, тема Fluent, затем свои стили. -->
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Colors.axaml" />
-                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Typography.axaml" />
-                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Metrics.axaml" />
                 <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/Icons.axaml" />
+                <!-- Копии тем ContextMenu/ToolTip с зум-оберткой: попапы меню и подсказок
+                     иначе не масштабируются зумом программы. -->
+                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/ZoomPopupThemes.axaml" />
+                <!-- Копия темы ComboBox: заглушка «Список пуст», выпадашка не шире поля. -->
+                <ResourceInclude Source="avares://PdfLibrary/Assets/Styles/ComboBoxTheme.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
@@ -23,8 +27,11 @@
         <Style Selector="Window">
             <Setter Property="Icon" Value="/Assets/Branding/icon.ico" />
         </Style>
-
+        <StyleInclude Source="avares://PdfLibrary/Assets/Styles/Typography.axaml" />
+        <!-- Стандарт габаритов диалоговых окон -->
+        <StyleInclude Source="avares://PdfLibrary/Assets/Styles/WindowMetrics.axaml" />
         <StyleInclude Source="avares://PdfLibrary/Assets/Styles/Controls.axaml" />
+        <StyleInclude Source="avares://PdfLibrary/Controls/Widgets/AppCheckBox.axaml" />
     </Application.Styles>
 
 </Application>

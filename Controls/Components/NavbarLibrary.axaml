@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PdfLibrary.Controls.Components.NavbarLibrary"
+             Height="56"
+             Background="{DynamicResource BrushBg}">
+
+    <!-- Навбар раздела: слева заголовок, справа сортировка и фильтр типов. Строки поиска здесь нет — она
+         стоит блоком над лентой (DocListView.axaml). Переключателя вида тоже нет: вид один. -->
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto"
+          Margin="16,0"
+          VerticalAlignment="Center">
+
+        <!-- Заголовок раздела -->
+        <TextBlock Grid.Column="0" x:Name="TitleLabel"
+                   Text="Библиотека PDF" TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center"
+                   FontSize="{DynamicResource FontSizeLarge}"
+                   FontWeight="{StaticResource FontWeightBold}" />
+
+        <ComboBox Grid.Column="1" x:Name="SortSelector" Width="160" Height="30" Margin="8,0,8,0"
+                  VerticalAlignment="Center" VerticalContentAlignment="Center"
+                  Background="{DynamicResource BrushSecondaryBg}" CornerRadius="{StaticResource RadiusBase}"
+                  ToolTip.Tip="Порядок документов" />
+
+        <!-- Выпадашка типов документа. Это НЕ ComboBox: содержимое рисует общий
+             ColumnFilterPanel — чеклист с поиском, количествами справа и «Готово».
+             Здесь только кнопка-якорь, к которой он крепится. -->
+        <!-- Вид и состояния — из класса navdrop (Controls.axaml), здесь только размер:
+             ширина фиксированная, иначе подпись «Тип документа: 12» двигала бы правый
+             край органа управления в навбаре. -->
+        <Button Grid.Column="2" x:Name="TypeBtn"
+                Classes="navdrop"
+                VerticalAlignment="Center"
+                Height="{StaticResource ControlHeightStandard}"
+                Width="170">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" x:Name="TypeLabel"
+                           Text="Тип документа"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <!-- Стрелка — тот же залитый шеврон 12×8, что рисует ComboBox своим
+                     DropDownGlyph, и тем же цветом. -->
+                <PathIcon Grid.Column="1"
+                          Width="12" Height="8"
+                          VerticalAlignment="Center" Margin="8,0,0,0"
+                          Foreground="{DynamicResource BrushSecondaryText}"
+                          Data="{StaticResource IconChevronDownFilled}" />
+            </Grid>
+        </Button>
+
+        <!-- Toggle правой панели чтения: стрелка «от линии» открывает, «к линии» закрывает.
+             Повторное открытие возвращает ТОТ ЖЕ документ, который читали последним, — иначе
+             кнопка открывала бы пустую панель. -->
+        <ToggleButton Grid.Column="3" x:Name="ReaderBtn" Classes="navbtn"
+                      Width="30" Height="30" Margin="8,0,0,0"
+                      VerticalAlignment="Center"
+                      CornerRadius="{StaticResource RadiusMedium}"
+                      ToolTip.Tip="Открыть панель чтения">
+            <Viewbox Width="{StaticResource IconSizeMedium}" Height="{StaticResource IconSizeMedium}">
+                <Canvas Width="24" Height="24">
+                    <!-- arrow-left-from-line: панель закрыта → клик откроет (←) -->
+                    <Path x:Name="ReaderOpenIcon"
+                          Data="{StaticResource IconArrowLeftFromLine}"
+                          Stroke="{Binding $parent[ToggleButton].Foreground}"
+                          StrokeThickness="{StaticResource IconStrokeMedium}"
+                          StrokeLineCap="Round" StrokeJoin="Round" />
+                    <!-- arrow-right-to-line: панель открыта → клик закроет (→) -->
+                    <Path x:Name="ReaderCloseIcon"
+                          IsVisible="False"
+                          Data="{StaticResource IconArrowRightToLine}"
+                          Stroke="{Binding $parent[ToggleButton].Foreground}"
+                          StrokeThickness="{StaticResource IconStrokeMedium}"
+                          StrokeLineCap="Round" StrokeJoin="Round" />
+                </Canvas>
+            </Viewbox>
+        </ToggleButton>
+    </Grid>
+
+</UserControl>

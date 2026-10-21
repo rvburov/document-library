@@ -6,22 +6,26 @@
         ShowInTaskbar="True"
         SystemDecorations="None"
         WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BrushBg}"
         Title="Библиотека PDF">
 
     <!-- Заставка на время открытия библиотеки: шапка как у установщика — название и версия. -->
-    <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="1">
+    <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLine}">
         <DockPanel>
             <Border DockPanel.Dock="Top" Height="76"
                     Background="{DynamicResource BrushSecondaryBg}"
-                    BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                    BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="0,0,0,1">
                 <StackPanel VerticalAlignment="Center" Margin="24,0">
-                    <TextBlock Text="Библиотека PDF" Classes="title" />
-                    <TextBlock x:Name="VersionText" Classes="small muted" />
+                    <TextBlock Text="Библиотека PDF" FontSize="{DynamicResource FontSizeLarge}"
+                               FontWeight="{StaticResource FontWeightBold}" />
+                    <TextBlock x:Name="VersionText" FontSize="{DynamicResource FontSizeSmall}"
+                               Foreground="{DynamicResource BrushSecondaryText}" />
                 </StackPanel>
             </Border>
 
             <StackPanel Margin="24,20" Spacing="12" VerticalAlignment="Center">
-                <TextBlock x:Name="StageText" Text="Открываю библиотеку…" Classes="muted" TextWrapping="Wrap" />
+                <TextBlock x:Name="StageText" Text="Открываю библиотеку…" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrushSecondaryText}" />
                 <ProgressBar x:Name="Bar" IsIndeterminate="True" Height="4" MinHeight="4"
                              Foreground="{DynamicResource BrushAccent}"
                              Background="{DynamicResource BrushSeparator}" />

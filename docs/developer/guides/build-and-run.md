@@ -152,7 +152,7 @@ Scripts/macos-build.sh osx-arm64 Release 1.2.3  # с номером версии
 
 Мастера в [Assets/Branding/](../../../Assets/Branding/): `icon-windows.png`, `icon-macos.png`,
 `icon-linux.png` (1024×1024, по одному на систему). Временная иконка нарисована
-`Scripts/draw-icon.py` (Python 3 с Pillow) в стиле SmartBase. Из мастеров `Scripts/generate-icons.sh`
+`Scripts/draw-icon.py` (Python 3 с Pillow). Из мастеров `Scripts/generate-icons.sh`
 собирает `icon.ico` и `icon.icns` (штатными утилитами macOS); на других ОС `.icns` можно собрать
 Pillow, как это сделано для временной иконки.
 

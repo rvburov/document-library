@@ -33,7 +33,7 @@ public sealed class DiagTests : IDisposable
     [Fact]
     public void Slow_operation_is_logged_with_context_and_threshold()
     {
-        using (var scope = Diag.Measure("открытие коллекции", TimeSpan.Zero, "база test, коллекция 5"))
+        using (var scope = Diag.Measure("загрузка библиотеки", TimeSpan.Zero, "источник test, папка 5"))
         {
             scope.Context += ", отобрано 12";
             Thread.Sleep(5);
@@ -42,8 +42,8 @@ public sealed class DiagTests : IDisposable
         var e = Assert.Single(_events);
         Assert.Equal(LogEventLevel.Warning, e.Level);
         var msg = e.RenderMessage();
-        Assert.Contains("Медленно: открытие коллекции", msg);
-        Assert.Contains("база test, коллекция 5, отобрано 12", msg);
+        Assert.Contains("Медленно: загрузка библиотеки", msg);
+        Assert.Contains("источник test, папка 5, отобрано 12", msg);
         Assert.Contains("при пороге 0 мс", msg);
     }
 

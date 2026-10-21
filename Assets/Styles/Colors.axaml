@@ -2,69 +2,154 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      Палитра программы — токены согласованного макета (docs/mockup.md, «Визуальные изменения»).
-      Две темы: светлая и темная. Цвета живут в словарях тем, и все потребители берут их через
+      Палитра программы: светлая и темная темы на одних и тех же ключах. Цвета живут в словарях тем, потребители берут кисти через
       DynamicResource — тогда смена темы в «Оформлении» перекрашивает окно на ходу.
-
-      Имена — как в SmartBase (BrushBg, BrushSecondaryBg, BrushSeparator…): перенесенная разметка
-      ложится на них без правки.
     -->
     <ResourceDictionary.ThemeDictionaries>
 
         <ResourceDictionary x:Key="Light">
             <!-- Фоны -->
+            <Color x:Key="ColorBg">#FFFFFF</Color>
+            <Color x:Key="ColorSecondaryBg">#F2F2F7</Color>
+            <Color x:Key="ColorInactiveBg">#FAFAFA</Color>
+            <Color x:Key="ColorActivityBar">#EBEBEB</Color>
+            <Color x:Key="ColorCardBg">#F2F2F7</Color>
+            <!-- Разделители. Единый цвет всех линий в программе. -->
+            <Color x:Key="ColorSeparator">#E5E5EA</Color>
+            <Color x:Key="ColorLineStrong">#C7C7CC</Color>
+            <!-- Текст -->
+            <Color x:Key="ColorPrimaryText">#1C1C1E</Color>
+            <Color x:Key="ColorSecondaryText">#8E8E93</Color>
+            <!-- Акценты -->
+            <Color x:Key="ColorAccent">#007AFF</Color>
+            <Color x:Key="ColorAccentLight">#E5F0FF</Color>
+            <Color x:Key="ColorRed">#FF3B30</Color>
+            <Color x:Key="ColorGreen">#34C759</Color>
+            <Color x:Key="ColorRedLight">#FFE9E7</Color>
+            <Color x:Key="ColorGreenLight">#E3F7E9</Color>
+            <Color x:Key="ColorOrange">#FF9500</Color>
+            <!-- Подложка найденного слова в тексте. Желтый, а не акцентный синий: синим набраны
+                 ссылки и действия, и подсвеченное слово читалось бы как то, на что можно нажать. -->
+            <Color x:Key="ColorHighlight">#FFF0B3</Color>
+            <!-- Формат документа на плитке карточки: опознает вид файла, как обложка. -->
+            <Color x:Key="ColorFormatPdf">#D0342C</Color>
+            <Color x:Key="ColorFormatPdfLight">#F9E8E6</Color>
+            <Color x:Key="ColorFormatOther">#8E8E93</Color>
+            <Color x:Key="ColorFormatOtherLight">#F3F3F4</Color>
+            <!-- Прочее -->
+            <Color x:Key="ColorHover">#E5E5EA</Color>
+            <Color x:Key="ColorDragHandle">#AEAEB2</Color>
+            <Color x:Key="ColorScrollbar">#C7C7CC</Color>
+            <Color x:Key="ColorTextSelection">#C7C7CC</Color>
+            <Color x:Key="ColorScrollbarTrack">#EDEDF0</Color>
+
             <SolidColorBrush x:Key="BrushBg"            Color="#FFFFFF" />
-            <SolidColorBrush x:Key="BrushSecondaryBg"   Color="#F2F2F7" />
             <SolidColorBrush x:Key="BrushInactiveBg"    Color="#FAFAFA" />
-            <SolidColorBrush x:Key="BrushHover"         Color="#EAEAEF" />
-            <!-- Линии: разделитель и линия сильнее (рамка плитки, пустой переключатель). -->
+            <SolidColorBrush x:Key="BrushSecondaryBg"   Color="#F2F2F7" />
+            <SolidColorBrush x:Key="BrushCardBg"        Color="#F2F2F7" />
             <SolidColorBrush x:Key="BrushSeparator"     Color="#E5E5EA" />
             <SolidColorBrush x:Key="BrushLineStrong"    Color="#C7C7CC" />
-            <!-- Текст -->
             <SolidColorBrush x:Key="BrushPrimaryText"   Color="#1C1C1E" />
-            <SolidColorBrush x:Key="BrushSecondaryText" Color="#6C6C70" />
-            <!-- Акцент: ссылки, действия, выбранное -->
-            <SolidColorBrush x:Key="BrushAccent"        Color="#0A64D8" />
-            <SolidColorBrush x:Key="BrushAccentHover"   Color="#084FA8" />
-            <SolidColorBrush x:Key="BrushAccentLight"   Color="#E6EFFC" />
-            <!-- Смысловые пары «надпись + подложка» для чипов -->
-            <SolidColorBrush x:Key="BrushRed"           Color="#C4291F" />
-            <SolidColorBrush x:Key="BrushRedLight"      Color="#FDECEA" />
-            <SolidColorBrush x:Key="BrushGreen"         Color="#1E7A3C" />
-            <SolidColorBrush x:Key="BrushGreenLight"    Color="#E3F4E8" />
-            <SolidColorBrush x:Key="BrushOrange"        Color="#9A5200" />
-            <SolidColorBrush x:Key="BrushOrangeLight"   Color="#FFF1DE" />
-            <!-- Найденное: подложка слова в сниппете и на странице; текущее совпадение -->
-            <SolidColorBrush x:Key="BrushHighlight"     Color="#FFE98A" />
-            <!-- Лист PDF: белый как бумага в любой теме -->
-            <SolidColorBrush x:Key="BrushPage"          Color="#FFFFFF" />
-            <!-- Затемнение под диалогом -->
-            <SolidColorBrush x:Key="BrushScrim"         Color="#521C1C1E" />
+            <SolidColorBrush x:Key="BrushSecondaryText" Color="#8E8E93" />
+            <SolidColorBrush x:Key="BrushAccent"        Color="#007AFF" />
+            <SolidColorBrush x:Key="BrushAccentLight"   Color="#E5F0FF" />
+            <SolidColorBrush x:Key="BrushRed"           Color="#FF3B30" />
+            <SolidColorBrush x:Key="BrushRedLight"      Color="#FFE9E7" />
+            <SolidColorBrush x:Key="BrushGreen"         Color="#34C759" />
+            <SolidColorBrush x:Key="BrushGreenLight"    Color="#E3F7E9" />
+            <SolidColorBrush x:Key="BrushOrange"        Color="#FF9500" />
+            <SolidColorBrush x:Key="BrushHighlight"     Color="#FFF0B3" />
+            <SolidColorBrush x:Key="BrushCode"          Color="#4E9A8C" />
+            <SolidColorBrush x:Key="BrushFormatPdf"        Color="#D0342C" />
+            <SolidColorBrush x:Key="BrushFormatPdfLight"   Color="#F9E8E6" />
+            <SolidColorBrush x:Key="BrushFormatOther"      Color="#8E8E93" />
+            <SolidColorBrush x:Key="BrushFormatOtherLight" Color="#F3F3F4" />
+            <SolidColorBrush x:Key="BrushHover"         Color="#E5E5EA" />
             <SolidColorBrush x:Key="BrushTextSelection" Color="#C7C7CC" />
+
+            <!-- Меню, вложенные меню и выпадающий список — серые, как контекстное меню. -->
+            <SolidColorBrush x:Key="FlyoutBackground"              Color="#F2F2F7" />
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#F2F2F7" />
+            <SolidColorBrush x:Key="MenuFlyoutSubItemBackground"   Color="#F2F2F7" />
+            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#F2F2F7" />
+
+            <!-- Полоса прокрутки -->
+            <SolidColorBrush x:Key="BrushScrollbarTrack"         Color="#EDEDF0" />
+            <SolidColorBrush x:Key="BrushScrollbarThumb"         Color="#A0A0A6" />
+            <SolidColorBrush x:Key="BrushScrollbarThumbHover"    Color="#7A7A80" />
+            <SolidColorBrush x:Key="BrushScrollbarThumbPressed"  Color="#5A5A5E" />
+            <SolidColorBrush x:Key="BrushScrollbarArrow"         Color="#7A7A80" />
+            <SolidColorBrush x:Key="ScrollViewerScrollBarsSeparatorBackground" Color="#EDEDF0" />
+
+            <!-- Лист PDF в панели чтения и подложка под листами -->
+            <SolidColorBrush x:Key="BrushPage"          Color="#FFFFFF" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
+            <Color x:Key="ColorBg">#1C1C1E</Color>
+            <Color x:Key="ColorSecondaryBg">#262629</Color>
+            <Color x:Key="ColorInactiveBg">#222225</Color>
+            <Color x:Key="ColorActivityBar">#232326</Color>
+            <Color x:Key="ColorCardBg">#262629</Color>
+            <Color x:Key="ColorSeparator">#38383C</Color>
+            <Color x:Key="ColorLineStrong">#4C4C52</Color>
+            <Color x:Key="ColorPrimaryText">#F2F2F7</Color>
+            <Color x:Key="ColorSecondaryText">#A6A6AD</Color>
+            <Color x:Key="ColorAccent">#5AA2FF</Color>
+            <Color x:Key="ColorAccentLight">#1C3250</Color>
+            <Color x:Key="ColorRed">#FF8F86</Color>
+            <Color x:Key="ColorGreen">#7FD99C</Color>
+            <Color x:Key="ColorRedLight">#3B2321</Color>
+            <Color x:Key="ColorGreenLight">#1E3326</Color>
+            <Color x:Key="ColorOrange">#FFB866</Color>
+            <Color x:Key="ColorHighlight">#6B5600</Color>
+            <Color x:Key="ColorFormatPdf">#FF8F86</Color>
+            <Color x:Key="ColorFormatPdfLight">#3B2321</Color>
+            <Color x:Key="ColorFormatOther">#A6A6AD</Color>
+            <Color x:Key="ColorFormatOtherLight">#2E2E32</Color>
+            <Color x:Key="ColorHover">#2E2E32</Color>
+            <Color x:Key="ColorDragHandle">#6C6C72</Color>
+            <Color x:Key="ColorScrollbar">#4C4C52</Color>
+            <Color x:Key="ColorTextSelection">#4C4C52</Color>
+            <Color x:Key="ColorScrollbarTrack">#232326</Color>
+
             <SolidColorBrush x:Key="BrushBg"            Color="#1C1C1E" />
-            <SolidColorBrush x:Key="BrushSecondaryBg"   Color="#262629" />
             <SolidColorBrush x:Key="BrushInactiveBg"    Color="#222225" />
-            <SolidColorBrush x:Key="BrushHover"         Color="#2E2E32" />
+            <SolidColorBrush x:Key="BrushSecondaryBg"   Color="#262629" />
+            <SolidColorBrush x:Key="BrushCardBg"        Color="#262629" />
             <SolidColorBrush x:Key="BrushSeparator"     Color="#38383C" />
             <SolidColorBrush x:Key="BrushLineStrong"    Color="#4C4C52" />
             <SolidColorBrush x:Key="BrushPrimaryText"   Color="#F2F2F7" />
             <SolidColorBrush x:Key="BrushSecondaryText" Color="#A6A6AD" />
             <SolidColorBrush x:Key="BrushAccent"        Color="#5AA2FF" />
-            <SolidColorBrush x:Key="BrushAccentHover"   Color="#85BBFF" />
             <SolidColorBrush x:Key="BrushAccentLight"   Color="#1C3250" />
             <SolidColorBrush x:Key="BrushRed"           Color="#FF8F86" />
             <SolidColorBrush x:Key="BrushRedLight"      Color="#3B2321" />
             <SolidColorBrush x:Key="BrushGreen"         Color="#7FD99C" />
             <SolidColorBrush x:Key="BrushGreenLight"    Color="#1E3326" />
             <SolidColorBrush x:Key="BrushOrange"        Color="#FFB866" />
-            <SolidColorBrush x:Key="BrushOrangeLight"   Color="#3A2C18" />
             <SolidColorBrush x:Key="BrushHighlight"     Color="#6B5600" />
-            <SolidColorBrush x:Key="BrushPage"          Color="#F4F4F1" />
-            <SolidColorBrush x:Key="BrushScrim"         Color="#80000000" />
+            <SolidColorBrush x:Key="BrushCode"          Color="#7FC6B8" />
+            <SolidColorBrush x:Key="BrushFormatPdf"        Color="#FF8F86" />
+            <SolidColorBrush x:Key="BrushFormatPdfLight"   Color="#3B2321" />
+            <SolidColorBrush x:Key="BrushFormatOther"      Color="#A6A6AD" />
+            <SolidColorBrush x:Key="BrushFormatOtherLight" Color="#2E2E32" />
+            <SolidColorBrush x:Key="BrushHover"         Color="#2E2E32" />
             <SolidColorBrush x:Key="BrushTextSelection" Color="#4C4C52" />
+
+            <SolidColorBrush x:Key="FlyoutBackground"              Color="#262629" />
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#262629" />
+            <SolidColorBrush x:Key="MenuFlyoutSubItemBackground"   Color="#262629" />
+            <SolidColorBrush x:Key="ComboBoxDropDownBackground"    Color="#262629" />
+
+            <SolidColorBrush x:Key="BrushScrollbarTrack"         Color="#232326" />
+            <SolidColorBrush x:Key="BrushScrollbarThumb"         Color="#5A5A60" />
+            <SolidColorBrush x:Key="BrushScrollbarThumbHover"    Color="#7A7A80" />
+            <SolidColorBrush x:Key="BrushScrollbarThumbPressed"  Color="#9A9AA0" />
+            <SolidColorBrush x:Key="BrushScrollbarArrow"         Color="#9A9AA0" />
+            <SolidColorBrush x:Key="ScrollViewerScrollBarsSeparatorBackground" Color="#232326" />
+
+            <SolidColorBrush x:Key="BrushPage"          Color="#F4F4F1" />
         </ResourceDictionary>
 
     </ResourceDictionary.ThemeDictionaries>
@@ -74,22 +159,19 @@
       для всех совпадений и оранжевая с обводкой для текущего. Полупрозрачные: под ними должен
       читаться текст страницы.
     -->
+    <!-- Затемнение окна под диалогом (DialogHost). -->
+    <SolidColorBrush x:Key="BrushScrim"           Color="#33000000" />
     <SolidColorBrush x:Key="BrushPageHit"         Color="#8CFFE98A" />
     <SolidColorBrush x:Key="BrushPageHitCurrent"  Color="#99FFB340" />
     <SolidColorBrush x:Key="BrushPageHitOutline"  Color="#E07B00" />
-    <!-- Счетчик совпадений на миниатюре страницы — желтый с темной цифрой в любой теме. -->
-    <SolidColorBrush x:Key="BrushBadge"           Color="#FFE98A" />
-    <SolidColorBrush x:Key="BrushBadgeText"       Color="#1C1C1E" />
-    <!-- Текст на акцентной кнопке -->
-    <SolidColorBrush x:Key="BrushOnAccent"        Color="#FFFFFF" />
 
     <!-- Переопределение системного акцента Fluent: фокус, выделение текста, ползунки. -->
-    <Color x:Key="SystemAccentColor">#0A64D8</Color>
-    <Color x:Key="SystemAccentColorLight1">#3B83E0</Color>
-    <Color x:Key="SystemAccentColorLight2">#6CA2E8</Color>
-    <Color x:Key="SystemAccentColorLight3">#9DC1F0</Color>
-    <Color x:Key="SystemAccentColorDark1">#084FA8</Color>
-    <Color x:Key="SystemAccentColorDark2">#063B7E</Color>
-    <Color x:Key="SystemAccentColorDark3">#042854</Color>
+    <Color x:Key="SystemAccentColor">#007AFF</Color>
+    <Color x:Key="SystemAccentColorLight1">#3395FF</Color>
+    <Color x:Key="SystemAccentColorLight2">#66B0FF</Color>
+    <Color x:Key="SystemAccentColorLight3">#99CAFF</Color>
+    <Color x:Key="SystemAccentColorDark1">#0062CC</Color>
+    <Color x:Key="SystemAccentColorDark2">#004999</Color>
+    <Color x:Key="SystemAccentColorDark3">#003166</Color>
 
 </ResourceDictionary>

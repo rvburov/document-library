@@ -1,8 +1,12 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PdfLibrary.Core.Documents;
 using PdfLibrary.Core.Library;
+using PdfLibrary.Database.DocIndex;
 using PdfLibrary.Utils;
 
 namespace PdfLibrary.Views.Library;
@@ -11,34 +15,14 @@ namespace PdfLibrary.Views.Library;
 public sealed record TagChip(string Name, IBrush Color);
 
 /// <summary>
-/// Размеры карточки по настройке «Размер карточки»: плитка, лента под ней, сколько строк
-/// найденного текста видно и наименьшая высота карточки. Числа — из макета.
-/// </summary>
-public sealed record CardMetrics(double TileWidth, double TileHeight, double TapeHeight, int SnippetLines,
-                                 double MinHeight, int SnippetWords)
-{
-    public static readonly CardMetrics Small  = new(56, 40, 16, 1, 84, 14);
-    public static readonly CardMetrics Medium = new(84, 60, 20, 3, 112, 32);
-    public static readonly CardMetrics Large  = new(120, 86, 24, 6, 160, 60);
-
-    public static CardMetrics Of(CardSize size) => size switch
-    {
-        CardSize.Small => Small,
-        CardSize.Large => Large,
-        _              => Medium,
-    };
-
-    /// <summary>Высота окошка миниатюры над лентой.</summary>
-    public double ImageHeight => TileHeight;
-}
-
-/// <summary>
-/// Карточка ленты — обертка документа для показа. Тексты собираются здесь, а не в разметке:
-/// «источник · папка · файл», «3,1 МБ · 48 стр. · A4 × 48», лента плитки «A4 · 48 с.».
+/// Модель строки карточки поверх документа библиотеки. ВСЕ видимые значения карточка берет привязками к этой модели, а не читает
+/// при постройке: метки, прочитанный текст и миниатюра приезжают позже ленты, и карточка
+/// обновляется на месте, без пересборки.
 /// </summary>
 public sealed partial class CardViewModel : ObservableObject
 {
     private readonly LibraryViewModel _owner;
+    private List<(string Text, bool Hit)> _snippetParts = [];
 
     public CardViewModel(DocItem doc, LibraryViewModel owner)
     {
@@ -48,107 +32,181 @@ public sealed partial class CardViewModel : ObservableObject
 
     public DocItem Doc { get; }
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackgroundBrush))]
+    [NotifyPropertyChangedFor(nameof(BorderBrushValue))]
+    private bool _isSelected;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackgroundBrush))]
+    private bool _isHovered;
+
     /// <summary>Найденный текст с маркерами совпадений; пусто — нет поиска или нашлось по названию.</summary>
     [ObservableProperty] private string _snippet = "";
 
-    [ObservableProperty] private bool _isSelected;
-
-    /// <summary>Карточка открыта в панели чтения — подсвечена в списке панели.</summary>
-    [ObservableProperty] private bool _isCurrent;
-
     [ObservableProperty] private Bitmap? _thumbnail;
+
+    /// <summary>Сниппет перерисован — строка карточки собирает Inlines заново.</summary>
+    public event Action? SnippetChanged;
 
     partial void OnIsSelectedChanged(bool value) => _owner.OnCardSelectionChanged(this, value);
 
-    public string Title => Doc.Title;
+    partial void OnSnippetChanged(string value)
+    {
+        _snippetParts = DocTextIndex.SplitSnippet(value);
+        OnPropertyChanged(nameof(HasSnippet));
+        SnippetChanged?.Invoke();
+    }
 
-    public string PathLine
+    partial void OnThumbnailChanged(Bitmap? value)
+    {
+        OnPropertyChanged(nameof(HasThumbnail));
+        OnPropertyChanged(nameof(HasBadge));
+    }
+
+    // ── Карточка: фон и рамка ────────────────────────────────────────────────
+
+    /// <summary>Фон карточки: выделение заметнее наведения .</summary>
+    public IBrush BackgroundBrush => IsSelected
+        ? new SolidColorBrush(Color.FromArgb(50, 128, 128, 128))
+        : IsHovered ? Brush("BrushInactiveBg", "#FAFAFA") : Brush("BrushBg", "#FFFFFF");
+
+    public IBrush BorderBrushValue => IsSelected
+        ? Brush("BrushAccent", "#007AFF")
+        : Brush("BrushSeparator", "#E5E5EA");
+
+    /// <summary>
+    /// Полоса слева от плитки: у источника своего цвета нет, и полоса серая.
+    /// </summary>
+    public IBrush StripeBrush => Brush("BrushSecondaryText", "#8E8E93");
+
+    // ── Тексты ───────────────────────────────────────────────────────────────
+
+    public string Title => Doc.Title;
+    public string TitleValue => Doc.Title;
+    public IBrush TitleColor => Brush("BrushPrimaryText", "#1C1C1E");
+
+    /// <summary>«Источник · папка · файл» — подпись под названием.</summary>
+    public string SubtitleValue
     {
         get
         {
+            if (!_owner.ShowPath) return "";
             var source = _owner.SourceName(Doc.SourceId);
             return Doc.Folder.Length > 0
-                ? $"{source} · {Doc.Folder.Replace("/", " / ")} · {Doc.FileName}"
+                ? $"{source} · {Doc.Folder.Replace("/", " · ")} · {Doc.FileName}"
                 : $"{source} · {Doc.FileName}";
         }
     }
 
-    public bool HasSnippet => Snippet.Length > 0;
+    public bool HasSubtitle => SubtitleValue.Length > 0;
 
-    partial void OnSnippetChanged(string value) => OnPropertyChanged(nameof(HasSnippet));
+    // ── Плитка формата ───────────────────────────────────────────────────────
+
+    /// <summary>Подпись на ленте плитки — «PDF».</summary>
+    public string FormatLabel => "PDF";
+    public IBrush FormatFill   => Brush("BrushFormatPdfLight", "#F9E8E6");
+    public IBrush FormatStroke => Brush("BrushFormatPdf", "#D0342C");
+
+    /// <summary>Миниатюры еще нет — окошко страницы залито серым.</summary>
+    public bool HasBadge => Thumbnail is null;
+    public bool HasThumbnail => Thumbnail is not null;
+
+    // ── Правая колонка: чипы и метрики ───────────────────────────────────────
 
     public string TypeText => Doc.DocType;
-    public bool HasType => Doc.DocType.Length > 0;
+    public bool   HasType  => _owner.ShowType && Doc.DocType.Length > 0;
+    public IBrush TypeBg   => Brush("BrushAccentLight", "#E5F0FF");
+    public IBrush TypeFg   => Brush("BrushAccent", "#007AFF");
 
-    public bool IsMissing => Doc.Missing;
-    public bool IsUnread  => Doc.IsUnread;
-    public bool IsChanged => !Doc.Missing && Doc.Changed;
-    public bool IsScan    => !Doc.Missing && Doc.IsScan;
-    public bool IsFailed  => !Doc.Missing && Doc.TextState == DocTextState.Failed;
+    public bool   IsMissing   => Doc.Missing;
+    public string MissingText => "файл не найден";
+    public IBrush MissingBg   => Brush("BrushRedLight", "#FFE9E7");
+    public IBrush MissingFg   => Brush("BrushRed", "#FF3B30");
 
-    public double ActionsOpacity => Doc.Missing ? 0.4 : 1;
+    /// <summary>Серый чип про текст: не прочитан, изменен, нет текстового слоя, не прочитался.</summary>
+    public string UnreadText => Doc.Missing ? "" : Doc.Changed ? "изменен · перечитать" : Doc.TextState switch
+    {
+        DocTextState.NotRead     => "текст не прочитан",
+        DocTextState.NoText      => "нет текстового слоя",
+        DocTextState.Unsupported => "поиск только по названию",
+        DocTextState.Failed      => "не удалось прочитать",
+        _                        => "",
+    };
+    public bool   IsUnread => UnreadText.Length > 0;
+    public IBrush UnreadBg => Brush("BrushSecondaryBg", "#F2F2F7");
+    public IBrush UnreadFg => Brush("BrushSecondaryText", "#8E8E93");
+
+    /// <summary>Метрики: «4,2 МБ · 112 страниц»; две величины.</summary>
+    public string MetaText
+    {
+        get
+        {
+            if (!_owner.ShowMeta || Doc.Missing) return "";
+            var parts = new List<string>(2) { Sizes.Text(Doc.Size) };
+            if (Doc.Pages > 0) parts.Add($"{Doc.Pages} {Plural.Of(Doc.Pages, "страница", "страницы", "страниц")}");
+            return string.Join(" · ", parts);
+        }
+    }
+    public bool HasMeta => MetaText.Length > 0;
+
+    /// <summary>Форматы листов чертежа: «A1 × 1, A3 × 2» — строкой под метриками.</summary>
+    public string SheetsText => _owner.ShowMeta && !Doc.Missing ? Doc.Sheets : "";
+    public bool HasSheets => SheetsText.Length > 0;
 
     public IReadOnlyList<TagChip> Tags => _owner.TagChips(Doc);
     public bool HasTags => Doc.Tags.Count > 0;
 
-    /// <summary>«3,1 МБ · 48 стр. · A4 × 48»; у пропавшего — «путь недоступен».</summary>
-    public string Meta
+    // ── Действия ─────────────────────────────────────────────────────────────
+
+    public bool CanOpen => !Doc.Missing;
+
+    /// <summary>Строка действий гаснет прозрачностью: место занято, высота карточек одна.</summary>
+    public double ReadOpacity => CanOpen ? 1 : 0;
+
+    public bool HasSnippet => _snippetParts.Count > 0;
+
+    /// <summary>
+    /// Собрать строку сниппета: обычные куски — как есть, совпадения — с желтой подсветкой.
+    /// Inlines привязкой не выражаются, поэтому карточка зовет это сама — при постройке и по
+    /// событию <see cref="SnippetChanged"/>.
+    /// </summary>
+    public void RenderSnippet(TextBlock target)
     {
-        get
-        {
-            if (Doc.Missing) return "путь недоступен";
-            var parts = new List<string> { Sizes.Text(Doc.Size) };
-            if (Doc.Pages > 0) parts.Add($"{Doc.Pages} стр.");
-            if (Doc.Sheets.Length > 0) parts.Add(Doc.Sheets);
-            return string.Join(" · ", parts);
-        }
+        target.Inlines?.Clear();
+        if (_snippetParts.Count == 0) return;
+
+        var hitBg = Brush("BrushHighlight", "#FFF0B3");
+        var plain = Brush("BrushSecondaryText", "#8E8E93");
+        var text  = Brush("BrushPrimaryText", "#1C1C1E");
+
+        foreach (var (chunk, hit) in _snippetParts)
+            target.Inlines?.Add(new Run(chunk)
+            {
+                Foreground = hit ? text : plain,
+                Background = hit ? hitBg : null,
+                FontWeight = hit ? FontWeight.SemiBold : FontWeight.Normal,
+            });
     }
 
-    /// <summary>Лента под миниатюрой: «A4 · 48 с.»; до чтения — «PDF», у пропавшего — «нет файла».</summary>
-    public string Tape
+    /// <summary>Документ изменился (прочитан, метки, переезд, тема) — перечитать все подписи.</summary>
+    public void Refresh()
     {
-        get
-        {
-            if (Doc.Missing) return "нет файла";
-            if (Doc.Pages <= 0) return "PDF";
-            return Doc.Sheet.Length > 0 ? $"{Doc.Sheet} · {Doc.Pages} с." : $"{Doc.Pages} с.";
-        }
+        OnPropertyChanged(string.Empty);
+        SnippetChanged?.Invoke();
     }
-
-    /// <summary>Плитка без миниатюры: формат крупно…</summary>
-    public string TileFormat => Doc.Missing ? "—" : Doc.Sheet.Length > 0 ? Doc.Sheet : "PDF";
-
-    /// <summary>…и число страниц под ним.</summary>
-    public string TilePages => Doc.Pages > 0 ? $"{Doc.Pages} с." : "";
-
-    /// <summary>Строка списка панели чтения: «48 стр. · 3,1 МБ».</summary>
-    public string ShortMeta
-    {
-        get
-        {
-            if (Doc.Missing) return "файл не найден";
-            return Doc.Pages > 0 ? $"{Doc.Pages} стр. · {Sizes.Text(Doc.Size)}" : Sizes.Text(Doc.Size);
-        }
-    }
-
-    // ── Настройки «Лента и карточки» ─────────────────────────────────────────
-
-    public CardMetrics Metrics => _owner.Metrics;
-    public bool ShowThumbnail => _owner.ShowThumbnails;
-    public bool ShowTileText => !_owner.ShowThumbnails;
-    public bool ShowPath => _owner.ShowPath;
-    public bool ShowMeta => _owner.ShowMeta;
-    public bool ShowTypeChip => _owner.ShowType && HasType;
-
-    /// <summary>Документ изменился (прочитан, метки, переезд) — перечитать все подписи.</summary>
-    public void Refresh() => OnPropertyChanged(string.Empty);
 
     /// <summary>Загрузить миниатюру, если ее еще нет. Зовется, когда карточка появилась на экране.</summary>
     public async void EnsureThumbnail()
     {
-        if (Thumbnail is not null || Doc.Missing || !ShowThumbnail) return;
+        if (Thumbnail is not null || Doc.Missing || !_owner.ShowThumbnails) return;
         var ready = ThumbnailLoader.Peek(Doc.FullPath, Doc.Mtime, Doc.Size);
         if (ready is not null) { Thumbnail = ready; return; }
         Thumbnail = await ThumbnailLoader.GetAsync(Doc.FullPath, Doc.Mtime, Doc.Size);
     }
+
+    private static IBrush Brush(string key, string fallback) =>
+        Application.Current is { } app &&
+        app.TryFindResource(key, app.ActualThemeVariant, out var res) && res is IBrush b
+            ? b : new SolidColorBrush(Color.Parse(fallback));
 }

@@ -28,7 +28,7 @@ public sealed class FreezeDetectorTests
         var d = new FreezeDetector(S(3));
         d.Beat(S(10));
 
-        var ops = "открытие коллекции";
+        var ops = "загрузка библиотеки";
         Assert.Null(d.Check(S(12), () => ops));      // еще в пределах порога
         Assert.Null(d.Check(S(14), () => ops));      // обнаружено — но отчет только после оттаивания
         ops = "другая";                              // позже операции сменились — в отчете останутся первые
@@ -38,7 +38,7 @@ public sealed class FreezeDetectorTests
         var report = d.Check(S(18), () => ops);
         Assert.NotNull(report);
         Assert.Equal(S(7.5), report!.Value.Duration);
-        Assert.Equal("открытие коллекции", report.Value.Operations);
+        Assert.Equal("загрузка библиотеки", report.Value.Operations);
 
         Assert.Null(d.Check(S(19), () => ops));      // второго отчета о том же зависании нет
     }

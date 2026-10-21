@@ -39,7 +39,7 @@ Push ветки и ее PR — два события на один код: пр�
 
 1. `dotnet test Tests/Unit --configuration Release`.
 2. `dotnet test Tests/Integration --configuration Release` — настоящая SQLite и настоящие PDF,
-   сервер не нужен, поэтому набор идет здесь целиком (в SmartBase его держит PostgreSQL).
+   сервер не нужен, поэтому набор идет здесь целиком.
 3. `dotnet run --project Tests/Screens --configuration Release` — стенд экранов; кадры
    прикладываются к прогону вложением `screens` на неделю.
 

@@ -4,7 +4,7 @@ using Avalonia.Media;
 namespace PdfLibrary.Utils;
 
 /// <summary>
-/// Масштаб всего интерфейса — настройка «Масштаб интерфейса» (90, 100, 110, 125 %). Применяется
+/// Масштаб всего интерфейса — настройка «Уровень масштабирования» (70…130 %). Применяется
 /// как LayoutTransform к корню главного окна (окно слушает <see cref="ScaleChanged"/>) и к
 /// всплывающим панелям — через ресурс программы <c>AppZoomTransform</c>.
 /// </summary>
@@ -26,6 +26,7 @@ public static class Scaling
     /// <summary>Установить масштаб, сохранить и применить вживую.</summary>
     public static void Set(double value)
     {
+        value = Math.Clamp(value, AppSettings.ScaleMin, AppSettings.ScaleMax);
         if (Math.Abs(value - Current) < 0.001) return;
         Current = value;
         AppSettings.Scale = value;

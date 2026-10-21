@@ -313,8 +313,9 @@ public static class AppSettings
         }, "light");
     }
 
-    /// <summary>Пункты «Масштаб интерфейса».</summary>
-    public static readonly double[] ScaleOptions = [0.9, 1.0, 1.1, 1.25];
+    /// <summary>«Уровень масштабирования»: 70…130 % шагом 10 %.</summary>
+    public const double ScaleMin     = 0.7;
+    public const double ScaleMax     = 1.3;
     public const double ScaleDefault = 1.0;
 
     public static double Scale
@@ -323,28 +324,27 @@ public static class AppSettings
         {
             var raw = _store?.Get(KeyScale);
             return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)
-                   && ScaleOptions.Any(o => Math.Abs(o - v) < 0.001)
+                   && v >= ScaleMin - 0.001 && v <= ScaleMax + 0.001
                 ? v
                 : ScaleDefault;
         }
         set
         {
+            value = Math.Clamp(value, ScaleMin, ScaleMax);
             if (Math.Abs(value - ScaleDefault) < 0.001) Remove(KeyScale);
             else Put(KeyScale, value.ToString(CultureInfo.InvariantCulture));
         }
     }
 
-    /// <summary>Пункты «Размер шрифта»: прибавка к стандартным размерам в пикселях.</summary>
-    public static readonly int[] FontDeltaOptions = [-1, 0, 2];
+    /// <summary>«Размер шрифта»: прибавка к стандартным размерам, −3…+3 пикселя.</summary>
+    public const int FontDeltaMin     = -3;
+    public const int FontDeltaMax     = 3;
+    public const int FontDeltaDefault = 0;
 
     public static int FontDelta
     {
-        get
-        {
-            var d = GetInt(KeyFontDelta, 0, -10, 10);
-            return Array.IndexOf(FontDeltaOptions, d) >= 0 ? d : 0;
-        }
-        set => SetInt(KeyFontDelta, value, 0);
+        get => GetInt(KeyFontDelta, FontDeltaDefault, FontDeltaMin, FontDeltaMax);
+        set => SetInt(KeyFontDelta, Math.Clamp(value, FontDeltaMin, FontDeltaMax), FontDeltaDefault);
     }
 
     // ── О программе ───────────────────────────────────────────────────────────
@@ -370,6 +370,18 @@ public static class AppSettings
     {
         get => GetBool(KeySidebarHidden, false);
         set => SetBool(KeySidebarHidden, value, false);
+    }
+
+    /// <summary>Ширина панели чтения: пределы и стандарт.</summary>
+    public const int ReaderWidthMin     = 320;
+    public const int ReaderWidthMax     = 900;
+    public const int ReaderWidthDefault = 520;
+
+    /// <summary>Ширина панели чтения, которую оставили ручкой у ее левого края.</summary>
+    public static int ReaderWidth
+    {
+        get => GetInt(KeyReaderWidth, ReaderWidthDefault, ReaderWidthMin, ReaderWidthMax);
+        set => SetInt(KeyReaderWidth, Math.Clamp(value, ReaderWidthMin, ReaderWidthMax), ReaderWidthDefault);
     }
 
     // ── Ключи ─────────────────────────────────────────────────────────────────
@@ -400,6 +412,7 @@ public static class AppSettings
     internal const string KeyUpdateFolder  = "update.folder";
     internal const string KeyAutoUpdate    = "update.auto";
     internal const string KeySidebarHidden = "sidebar.hidden";
+    internal const string KeyReaderWidth   = "reader.width";
 
     // ── Чтение и запись ───────────────────────────────────────────────────────
 

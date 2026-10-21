@@ -13,13 +13,48 @@
          и индикатор). Фиксированная высота либо не вмещала худший случай — тело наезжало на
          футер, — либо оставляла пустоту в простом. -->
 
+    <Window.Styles>
+        <!-- Главная кнопка («Установить»/«Обновить»): размер как у dialog-кнопок приложения,
+             синий фон (accent), темно-синий #0062CC при наведении. -->
+        <Style Selector="Button.accent">
+            <Setter Property="Width"                      Value="110" />
+            <Setter Property="Height"                     Value="30" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment"   Value="Center" />
+            <Setter Property="CornerRadius"               Value="{StaticResource RadiusMedium}" />
+        </Style>
+        <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#0062CC" />
+        </Style>
+
+        <!-- Ссылка «Установить в другую папку…»: кнопка без рамки и фона. -->
+        <Style Selector="Button.link">
+            <Setter Property="Background"  Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding"     Value="0" />
+            <Setter Property="Foreground"  Value="{DynamicResource BrushAccent}" />
+            <Setter Property="Cursor"      Value="Hand" />
+            <Setter Property="FontSize"    Value="{DynamicResource FontSizeSmall}" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+        </Style>
+        <!-- Отключенная ссылка (идет установка): тема Fluent красит фон отключенной кнопки
+             серым, и ссылка выглядела серой плашкой. Фон остается прозрачным, гаснет текст. -->
+        <Style Selector="Button.link:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        </Style>
+    </Window.Styles>
 
     <DockPanel>
 
         <!-- Шапка -->
         <Border DockPanel.Dock="Top" Height="76"
                 Background="{DynamicResource BrushSecondaryBg}"
-                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineBottom}">
+                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}">
             <StackPanel VerticalAlignment="Center" Margin="24,0">
                 <TextBlock Text="Библиотека PDF"
                            FontSize="{DynamicResource FontSizeLarge}"
@@ -35,15 +70,15 @@
              так однозначно читается, к какому действию она применяется. -->
         <Border DockPanel.Dock="Bottom"
                 Background="{DynamicResource BrushSecondaryBg}"
-                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{StaticResource BorderLineTop}">
+                BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineTop}">
             <StackPanel Margin="24,12" Spacing="10">
                 <CheckBox x:Name="RemoveDataCheck" IsVisible="False"
                           Content="вместе с данными пользователя"
                           FontSize="{DynamicResource FontSizeSmall}" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-                    <Button x:Name="UninstallBtn" Content="Удалить"    Theme="{StaticResource SecondaryButton}" Click="OnUninstall" IsVisible="False" />
-                    <Button x:Name="CancelBtn"    Content="Отмена"     Theme="{StaticResource SecondaryButton}" Click="OnCancel" />
-                    <Button x:Name="PrimaryBtn"   Content="Установить" Theme="{StaticResource PrimaryButton}" Click="OnPrimary" />
+                    <Button x:Name="UninstallBtn" Content="Удалить"    Classes="dialog" Click="OnUninstall" IsVisible="False" />
+                    <Button x:Name="CancelBtn"    Content="Отмена"     Classes="dialog" Click="OnCancel" />
+                    <Button x:Name="PrimaryBtn"   Content="Установить" Classes="accent" Click="OnPrimary" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -82,7 +117,7 @@
                         <!-- Строка известной высоты (как кнопки и поля ввода) — по ней и
                              считается высота списка на VisibleInstallRows строк. -->
                         <Style Selector="ListBox#InstallsList ListBoxItem">
-                            <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+                            <Setter Property="MinHeight" Value="{StaticResource ControlHeightStandard}" />
                             <Setter Property="Padding"   Value="10,0" />
                             <Setter Property="VerticalContentAlignment" Value="Center" />
                         </Style>
@@ -101,7 +136,7 @@
                 </ListBox>
             </Border>
 
-            <Button x:Name="OtherFolderBtn" Theme="{StaticResource LinkButton}" IsVisible="False"
+            <Button x:Name="OtherFolderBtn" Classes="link" IsVisible="False"
                     Content="Установить в другую папку…" Click="OnOtherFolder" />
 
             <StackPanel x:Name="PathBlock" Spacing="6">
@@ -114,7 +149,7 @@
                              VerticalContentAlignment="Center" Margin="0,0,8,0"
                              Background="{DynamicResource BrushSecondaryBg}"
                              CornerRadius="{StaticResource RadiusSmall}" />
-                    <Button Grid.Column="1" Content="Обзор" Theme="{StaticResource SecondaryButton}" Click="OnBrowse" />
+                    <Button Grid.Column="1" Content="Обзор" Classes="dialog" Click="OnBrowse" />
                 </Grid>
                 <!-- Виден, когда путь вписали руками и к нему допишется своя подпапка:
                      человек должен заранее знать, куда реально ляжет программа. -->
@@ -137,7 +172,8 @@
                 <ProgressBar x:Name="ProgressBar" Minimum="0" Maximum="1" Height="4" MinHeight="4"
                              Foreground="{DynamicResource BrushAccent}"
                              Background="{DynamicResource BrushSeparator}" />
-                <TextBlock x:Name="ProgressText" Classes="small muted" />
+                <TextBlock x:Name="ProgressText" FontSize="{DynamicResource FontSizeSmall}"
+                           Foreground="{DynamicResource BrushSecondaryText}" />
             </StackPanel>
 
         </StackPanel>
