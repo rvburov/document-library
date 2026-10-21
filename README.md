@@ -1,7 +1,7 @@
 # Библиотека PDF
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="Версия">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Версия">
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white" alt=".NET">
   <img src="https://img.shields.io/badge/Avalonia_UI-11.2-8B44AC" alt="Avalonia">
   <img src="https://img.shields.io/badge/EF_Core-9.0-512BD4" alt="EF Core">
