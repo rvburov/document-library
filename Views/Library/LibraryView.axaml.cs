@@ -1,8 +1,6 @@
+using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Platform.Storage;
-using PdfLibrary.Controls.Components;
 using PdfLibrary.Services;
-using PdfLibrary.Utils;
 using PdfLibrary.Views.Dialogs;
 
 namespace PdfLibrary.Views.Library;
@@ -14,6 +12,16 @@ namespace PdfLibrary.Views.Library;
 /// </summary>
 public partial class LibraryView : UserControl
 {
+    public static readonly StyledProperty<double> ViewportWidthProperty =
+        AvaloniaProperty.Register<LibraryView, double>(nameof(ViewportWidth), double.NaN);
+
+    /// <summary>Ширина видимой части ленты: кнопки навбара не должны уходить под документ.</summary>
+    public double ViewportWidth
+    {
+        get => GetValue(ViewportWidthProperty);
+        set => SetValue(ViewportWidthProperty, value);
+    }
+
     /// <summary>«Прочитать» в карточке, двойной щелчок по ней или Enter — открыть панель чтения.</summary>
     public event Action<CardViewModel>? ReadRequested;
 
@@ -31,10 +39,6 @@ public partial class LibraryView : UserControl
         {
             if (DocActions.OpenExternal(card.Doc.FullPath) is { } error) MainWindow.NoticeOf(this, error, isError: true);
         };
-
-        TagBtn.Click += (_, _) => ShowTagMenu();
-        CopyBtn.Click += async (_, _) => await CopySelectedAsync();
-        ClearSelectionBtn.Click += (_, _) => _vm?.ClearSelection();
     }
 
     public LibraryViewModel? Vm => _vm;
@@ -44,11 +48,6 @@ public partial class LibraryView : UserControl
         _vm = vm;
         NavbarControl.Attach(vm);
         DocList.Attach(vm);
-        vm.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(LibraryViewModel.SelectedCount)) SyncSelection();
-        };
-        SyncSelection();
     }
 
     /// <summary>Открыть документ в панели чтения — то же, что «Прочитать» на его карточке.</summary>
@@ -62,13 +61,6 @@ public partial class LibraryView : UserControl
 
     /// <summary>Тема или размер карточки сменились — пересобрать карточки на месте.</summary>
     public void RebuildCards() => DocList.Rebuild();
-
-    private void SyncSelection()
-    {
-        if (_vm is not { } vm) return;
-        SelectionBar.IsVisible = vm.HasSelection;
-        SelectedLabel.Text = vm.SelectedText;
-    }
 
     // ── Создание: источник, группа, метка ────────────────────────────────────
 
@@ -107,50 +99,5 @@ public partial class LibraryView : UserControl
         if (await dialogs.ShowAsync(new NewTagDialog(vm.SelectedCount)) is not NewTag result) return;
         var tag = vm.Library.AddTag(result.Name, result.Color);
         if (result.ApplyToSelected) vm.SetTagOnSelected(tag.Id, true);
-    }
-
-    // ── Выбранные документы ──────────────────────────────────────────────────
-
-    // Меню меток — контекстное меню: у метки, которая стоит на всех выбранных, галочка;
-    // щелчок ставит метку всем или снимает со всех.
-    private void ShowTagMenu()
-    {
-        if (_vm is not { } vm) return;
-        var menu = new ContextMenu();
-        foreach (var pick in vm.TagPicks())
-        {
-            var item = new MenuItem { Header = MenuIcons.ChoiceHeader(pick.Name, pick.IsOn) };
-            var id = pick.Id;
-            var on = !pick.IsOn;
-            item.Click += (_, _) => vm.SetTagOnSelected(id, on);
-            menu.Items.Add(item);
-        }
-        if (menu.Items.Count > 0) menu.Items.Add(new Separator());
-        var create = new MenuItem { Header = MenuIcons.Header("IconPlus", "Новая метка") };
-        create.Click += async (_, _) => await NewTagAsync();
-        menu.Items.Add(create);
-        menu.Open(TagBtn);
-    }
-
-    private async Task CopySelectedAsync()
-    {
-        if (_vm is not { } vm || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
-        var files = vm.Selected.Where(d => !d.Missing).Select(d => d.FullPath).ToList();
-        if (files.Count == 0)
-        {
-            MainWindow.NoticeOf(this, "Выбранных файлов нет на диске — копировать нечего.", isError: true);
-            return;
-        }
-        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "Куда скопировать документы", AllowMultiple = false,
-        });
-        if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } folder) return;
-
-        MainWindow.NoticeOf(this, $"Копирую {files.Count} {Plural.Documents(files.Count)}…");
-        var (copied, errors) = await Task.Run(() => DocActions.CopyTo(files, folder));
-        MainWindow.NoticeOf(this, errors.Count == 0
-            ? $"Скопировано {copied} {Plural.Documents(copied)} в {folder}"
-            : $"Скопировано {copied} из {files.Count}. Не вышло: {errors[0]}", isError: errors.Count > 0);
     }
 }

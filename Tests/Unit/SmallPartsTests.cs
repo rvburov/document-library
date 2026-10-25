@@ -24,12 +24,15 @@ public sealed class SmallPartsTests
         Assert.Equal(["~$*.pdf", "*.tmp.pdf"], SourceScanner.ParseMasks(" ~$*.pdf ;, *.tmp.pdf ,"));
 
     [Theory]
-    [InlineData("насос центр", true)]
+    [InlineData("насос центробежный", true)]
+    [InlineData("насос центр", false)]
     [InlineData("ЦНС 38", true)]
     [InlineData("паспорта", true)]       // папка тоже ищется
     [InlineData("насос дизель", false)]  // все слова сразу
+    [InlineData("центробежный насос", false)]
+    [InlineData("насос ЦНС", false)]
     [InlineData("сос", false)]           // слово ищется с начала, не с середины
-    public void Name_search_needs_every_word(string query, bool found)
+    public void Name_search_needs_the_whole_phrase(string query, bool found)
     {
         var doc = new DocItem
         {

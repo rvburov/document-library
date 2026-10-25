@@ -2,77 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:comp="using:PdfLibrary.Controls.Components"
              xmlns:lib="using:PdfLibrary.Views.Library"
-             x:Class="PdfLibrary.Views.Library.LibraryView">
+             x:Class="PdfLibrary.Views.Library.LibraryView"
+             x:Name="LibraryRoot">
 
-    <!-- Раздел «Лента»: навбар и лента, внизу — панель выбранных документов внизу ленты (метка, копирование в папку). -->
+    <!-- Раздел «Лента»: навбар и лента карточек. -->
     <Grid RowDefinitions="Auto,*">
 
         <!-- Навбар: заголовок, порядок, тип документа, панель чтения. Линию под навбаром не
              рисуем — ее рисует MainWindow. -->
-        <comp:NavbarLibrary Grid.Row="0" x:Name="NavbarControl" />
+        <comp:NavbarLibrary Grid.Row="0" x:Name="NavbarControl"
+                            HorizontalAlignment="Left"
+                            Width="{Binding #LibraryRoot.ViewportWidth}" />
 
         <lib:DocListView Grid.Row="1" x:Name="DocList" />
-
-        <!-- Выбранные документы: плашка в стиле контекстного меню, по центру над лентой. -->
-        <Border Grid.Row="1" x:Name="SelectionBar"
-                IsVisible="False"
-                HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                Margin="0,0,0,16" Padding="12,4,4,4"
-                Background="{DynamicResource BrushSecondaryBg}"
-                BorderBrush="{DynamicResource BrushSeparator}"
-                BorderThickness="{DynamicResource BorderLine}"
-                CornerRadius="{StaticResource RadiusMedium}"
-                BoxShadow="0 4 16 0 #22000000">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock x:Name="SelectedLabel"
-                           VerticalAlignment="Center" Margin="0,0,6,0"
-                           FontWeight="{StaticResource FontWeightBold}" />
-
-                <Button x:Name="TagBtn" Classes="navdrop" Height="{StaticResource ControlHeightStandard}"
-                        Background="{DynamicResource BrushBg}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}">
-                            <Canvas Width="24" Height="24">
-                                <Path Data="{StaticResource IconTag}"
-                                      Stroke="{DynamicResource BrushPrimaryText}"
-                                      StrokeThickness="{StaticResource IconStrokeMedium}"
-                                      StrokeLineCap="Round" StrokeJoin="Round" />
-                            </Canvas>
-                        </Viewbox>
-                        <TextBlock Text="Метка" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <Button x:Name="CopyBtn" Classes="navdrop" Height="{StaticResource ControlHeightStandard}"
-                        Background="{DynamicResource BrushBg}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}">
-                            <Canvas Width="24" Height="24">
-                                <Path Data="{StaticResource IconDownload}"
-                                      Stroke="{DynamicResource BrushPrimaryText}"
-                                      StrokeThickness="{StaticResource IconStrokeMedium}"
-                                      StrokeLineCap="Round" StrokeJoin="Round" />
-                            </Canvas>
-                        </Viewbox>
-                        <TextBlock Text="Копировать в папку" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <Button x:Name="ClearSelectionBtn" Classes="navbtn"
-                        Width="30" Height="30"
-                        CornerRadius="{StaticResource RadiusMedium}"
-                        ToolTip.Tip="Снять выделение">
-                    <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}">
-                        <Canvas Width="24" Height="24">
-                            <Path Data="{StaticResource IconClose}"
-                                  Stroke="{Binding $parent[Button].Foreground}"
-                                  StrokeThickness="{StaticResource IconStrokeMedium}"
-                                  StrokeLineCap="Round" StrokeJoin="Round" />
-                        </Canvas>
-                    </Viewbox>
-                </Button>
-            </StackPanel>
-        </Border>
 
     </Grid>
 

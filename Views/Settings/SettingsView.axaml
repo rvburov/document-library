@@ -170,7 +170,7 @@
         <!-- Линию под шапкой рисует главное окно (на высоте 56 через всю ширину). -->
 
         <ScrollViewer x:Name="Scroll" HorizontalScrollBarVisibility="Disabled">
-            <Panel MaxWidth="808" HorizontalAlignment="Left" Margin="16,0,16,32">
+            <Panel Margin="16,0,16,32">
 
                     <!-- ══ Общее ══════════════════════════════════════════════ -->
                     <StackPanel x:Name="General">

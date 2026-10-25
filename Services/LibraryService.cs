@@ -668,8 +668,8 @@ public sealed class LibraryService : IDisposable
 
     /// <summary>
     /// Найти документы: по тексту внутри (кеш, FTS5) и по названию и имени файла (в памяти).
-    /// Правила совпадения у обоих одни — <see cref="DocHighlight"/>: слова целиком, последнее
-    /// по началу, все слова сразу.
+    /// Правила совпадения у обоих одни — <see cref="DocHighlight"/>: вся фраза подряд,
+    /// одно слово — по началу слова.
     /// </summary>
     public async Task<SearchOutcome?> SearchAsync(string query, int snippetWords, CancellationToken ct = default)
     {
@@ -711,13 +711,11 @@ public sealed class LibraryService : IDisposable
         }).ConfigureAwait(false);
     }
 
-    /// <summary>Все слова запроса есть в названии, имени файла или папке документа.</summary>
+    /// <summary>Целая фраза есть в названии, имени файла или папке документа.</summary>
     public static bool NameMatches(DocItem doc, IReadOnlyList<string> tokens)
     {
-        var text = doc.Title + " " + doc.FileName + " " + doc.Folder;
-        foreach (var token in tokens)
-            if (DocHighlight.Find(text, [token], lastIsPrefix: true).Count == 0) return false;
-        return true;
+        return new[] { doc.Title, doc.FileName, doc.Folder }
+            .Any(text => DocHighlight.Find(text, tokens).Count > 0);
     }
 
     // ── Служебное ─────────────────────────────────────────────────────────────

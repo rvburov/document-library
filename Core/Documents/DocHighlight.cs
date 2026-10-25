@@ -7,8 +7,9 @@ namespace PdfLibrary.Core.Documents;
 /// Где в тексте документа стоят совпадения с поисковым запросом — для подсветки в панели
 /// чтения. Чистая логика без UI и без базы.
 ///
-/// <b>Правила совпадения здесь НЕ свои, а те же, по которым ищет FTS5.</b> Это главное в этом
-/// файле. Поиск в библиотеке идет запросом <c>MATCH</c> (<c>DocTextIndex.BuildMatch</c>), и если
+/// <b>Правила совпадения общие у поиска и подсветки.</b> Индекс FTS5 сначала отбирает
+/// кандидатов запросом <c>MATCH</c> (<c>DocTextIndex.BuildMatch</c>), затем этот класс проверяет
+/// целую фразу. Если
 /// подсветка станет считать совпадения как-нибудь иначе — «поиском нашлось, а в документе
 /// ничего не подсвечено» — человек решит, что панель сломана. Поэтому:
 ///
@@ -20,8 +21,8 @@ namespace PdfLibrary.Core.Documents;
 ///       цифра, и ищет получившиеся слова ПОДРЯД. Подсветка режет так же (<see cref="Parts"/>)
 ///       и ищет те же слова подряд; слово из одной пунктуации индекс не видит вовсе, и оно
 ///       пропускается;</item>
-/// <item>последнее слово ищется по началу слова (в MATCH ему приписывается <c>*</c>), все
-///       остальные — целым словом; у фразы «*» достается ее последней части;</item>
+/// <item>одно слово ищется по началу слова; запрос из нескольких слов — целой фразой,
+///       без замены последнего слова на более длинное;</item>
 /// <item>слово и буквы — как у токенизатора индекса (<c>unicode61 remove_diacritics 2</c>):
 ///       регистр не различается, с латиницы снимаются надстрочные знаки («cafe» — это «café»),
 ///       «²» и «½» — часть слова («м²»), а «й» остается «й» (<see cref="Fold"/>,
@@ -122,20 +123,23 @@ public static class DocHighlight
     }
 
     /// <summary>
-    /// Все совпадения в тексте, по возрастанию позиции. Пересечений не бывает: слово,
-    /// совпавшее сразу с двумя словами запроса, дает одно совпадение.
+    /// Все совпадения целой фразы в тексте, по возрастанию позиции, без пересечений.
+    /// Слова идут подряд в порядке запроса; пробелы, переносы и пунктуация разделяют слова.
     /// </summary>
     /// <param name="lastIsPrefix">
-    /// Последнее слово запроса ищется по началу слова. False — когда запрос заведомо
-    /// завершен (например, подсветка по готовому списку слов).
+    /// Запрос из одного слова ищется по началу слова. False — когда запрос заведомо
+    /// завершен. Фраза из нескольких слов всегда ищется целиком.
     /// </param>
     public static List<Hit> Find(string? text, IReadOnlyList<string>? tokens, bool lastIsPrefix = true)
     {
         var hits = new List<Hit>();
         if (string.IsNullOrEmpty(text) || tokens is null || tokens.Count == 0) return hits;
 
-        var phrases = Phrases(tokens, lastIsPrefix);
-        if (phrases.Count == 0) return hits;
+        var prefix = lastIsPrefix && tokens.Count(token => Parts(token).Length > 0) == 1;
+        var groups = tokens.Select((token, i) => Variants(token)
+                .Select(parts => new Phrase(parts, prefix && i == tokens.Count - 1)).ToArray())
+            .Where(group => group.Length > 0).ToArray();
+        if (groups.Length == 0) return hits;
 
         // Слова текста с границами. Складываются лениво и по одному разу: сравнение доходит
         // не до каждого слова целиком, а текст бывает на миллионы знаков.
@@ -161,13 +165,21 @@ public static class DocHighlight
         var i = 0;
         while (i < words.Count)
         {
-            // Из фраз, стоящих на этом месте, берется самая длинная: «21» и «21.501» в одном
-            // запросе подсвечивают «21.501» целиком, а не его первую половину.
-            var best = 0;
-            foreach (var phrase in phrases)
-                if (phrase.Parts.Length > best && MatchesAt(phrase, i)) best = phrase.Parts.Length;
-
-            if (best == 0) { i++; continue; }
+            // Варианты числа могут занимать разное число слов. Храним только достигнутые
+            // позиции, чтобы несколько чисел не раздували перебор всех сочетаний вариантов.
+            if (!groups[0].Any(phrase => MatchesAt(phrase, i))) { i++; continue; }
+            HashSet<int> ends = [i];
+            foreach (var group in groups)
+            {
+                var next = new HashSet<int>();
+                foreach (var at in ends)
+                    foreach (var phrase in group)
+                        if (MatchesAt(phrase, at)) next.Add(at + phrase.Parts.Length);
+                ends = next;
+                if (ends.Count == 0) break;
+            }
+            if (ends.Count == 0) { i++; continue; }
+            var best = ends.Max() - i;
             hits.Add(new Hit(words[i].Start, words[i + best - 1].End - words[i].Start));
             i += best;
         }
@@ -220,22 +232,8 @@ public static class DocHighlight
         return i >= 0 ? i : ~i - 1;
     }
 
-    // Фраза запроса: части подряд; у последней части последнего слова запроса — поиск по началу.
+    // Части слова подряд; поиск по началу допустим только для запроса из одного слова.
     private readonly record struct Phrase(string[] Parts, bool LastIsPrefix);
-
-    private static List<Phrase> Phrases(IReadOnlyList<string> tokens, bool lastIsPrefix)
-    {
-        var phrases = new List<Phrase>(tokens.Count);
-        for (var t = 0; t < tokens.Count; t++)
-        {
-            // Слово из одной пунктуации: индекс из него не делает ни одной части и в поиске
-            // его не учитывает («гост ++» находит все, где есть «гост»). Подсветке — то же:
-            // вариантов у такого слова нет.
-            foreach (var parts in Variants(tokens[t]))
-                phrases.Add(new Phrase(parts, lastIsPrefix && t == tokens.Count - 1));
-        }
-        return phrases;
-    }
 
     // Границы слов текста: [Start, End) каждой непрерывной цепочки знаков слова. Снимаемый знак
     // (<see cref="IsDroppedMark"/>) слово продолжает, но не начинает — так и у токенизатора.

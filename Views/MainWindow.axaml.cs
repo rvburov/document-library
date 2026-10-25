@@ -356,7 +356,7 @@ public partial class MainWindow : Window
 
         _lastRead   = card;
         _readerOpen = true;
-        LibraryReader.Show(card.Doc, _vm.AppliedQuery, _vm.SourceName(card.Doc.SourceId));
+        LibraryReader.Show(card.Doc, _vm.AppliedQuery);
         LibraryModule.SetReaderOpen(true);
         AppSettings.LastDocument = (card.Doc.FullPath, 0);
         ApplyColumns();

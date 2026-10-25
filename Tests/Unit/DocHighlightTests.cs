@@ -13,6 +13,15 @@ namespace PdfLibrary.Tests.Unit;
 /// </summary>
 public sealed class DocHighlightTests
 {
+    [Fact]
+    public void Phrase_query_matches_adjacent_words_in_order()
+    {
+        Assert.Equal(["Буров Роман"], Words("Буров и Роман. Роман Буров. Буров Роман Викторович", "Буров Роман"));
+        Assert.Empty(Words("Буров и Роман", "Буров Роман"));
+        Assert.Empty(Words("Буров Романов", "Буров Роман"));
+        Assert.Equal([(0, 1)], DocHighlight.FindInWords(["Буров", "Роман", "Викторович"], DocHighlight.Tokens("Буров Роман")));
+        Assert.Equal(["Буров\nРоман"], Words("Буров\nРоман", "Буров Роман"));
+    }
     private static List<string> Words(string text, string query) =>
         [.. DocHighlight.Find(text, DocHighlight.Tokens(query)).Select(h => text.Substring(h.Start, h.Length))];
 
@@ -143,7 +152,9 @@ public sealed class DocHighlightTests
     {
         // «систем» — не последнее слово, и «системами» ему не равно.
         Assert.DoesNotContain("системами", Words("работа с системами связи", "систем связ"));
-        Assert.Contains("связи", Words("работа с системами связи", "систем связ"));
+        Assert.Empty(Words("работа с системами связи", "систем связ"));
+        Assert.Empty(Words("настройка систем связи", "систем связ"));
+        Assert.Equal(["систем связи"], Words("настройка систем связи", "систем связи"));
     }
 
     [Fact]
@@ -198,7 +209,7 @@ public sealed class DocHighlightTests
     {
         Assert.Equal(["21.501"], Words("ГОСТ 21.501", "21.5"));
         // То же слово не последнее — совпадает только целиком.
-        Assert.Equal(["ГОСТ"], Words("ГОСТ 21.501", "21.5 гост"));
+        Assert.Empty(Words("ГОСТ 21.501", "21.5 гост"));
     }
 
     /// <summary>
@@ -223,11 +234,12 @@ public sealed class DocHighlightTests
         Assert.Empty(DocHighlight.Parts("++"));
     }
 
-    /// <summary>На одном месте побеждает самая длинная фраза — «21.501» целиком, а не «21».</summary>
+    /// <summary>Повторенное слово в запросе требует повторения в тексте, а не двух подсветок одного места.</summary>
     [Fact]
     public void The_longest_phrase_wins_at_one_spot()
     {
-        Assert.Equal(["21.501"], Words("ГОСТ 21.501", "21 21.501"));
+        Assert.Empty(Words("ГОСТ 21.501", "21 21.501"));
+        Assert.Equal(["21 21.501"], Words("номера 21 21.501", "21 21.501"));
     }
 
     [Fact]
@@ -314,7 +326,8 @@ public sealed class DocHighlightTests
 
         Assert.Equal([(1, 2)], DocHighlight.FindInWords(words, tokens));
         Assert.Equal([(5, 6)], DocHighlight.FindInWords(words, DocHighlight.Tokens("21.501")));
-        Assert.Equal([(0, 0), (3, 3)], DocHighlight.FindInWords(words, DocHighlight.Tokens("итого руб")));
+        Assert.Empty(DocHighlight.FindInWords(words, DocHighlight.Tokens("итого руб")));
+        Assert.Equal([(0, 3)], DocHighlight.FindInWords(words, DocHighlight.Tokens("итого 30772.48 руб")));
     }
 
     /// <summary>Два совпадения в одном слове — одно совпадение: подсвечивается слово, и считать его дважды незачем.</summary>

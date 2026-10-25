@@ -29,24 +29,16 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
 
         <!-- ── Шапка: название документа и раскрытие панели ─────────────────────────── -->
         <Grid Grid.Row="0" Height="56" Margin="16,0" ColumnDefinitions="*,Auto">
-            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1" Margin="0,0,8,0">
-                <TextBlock x:Name="TitleLabel"
-                           Text="Документ"
-                           FontSize="{DynamicResource FontSizeLarge}"
-                           FontWeight="{StaticResource FontWeightBold}"
-                           TextTrimming="CharacterEllipsis" />
-                <!-- Подпись говорит, ЧТО открыто: имя файла и где он лежит. Без нее у двух
-                     одноименных записей панель выглядит одинаково. -->
-                <TextBlock x:Name="SubtitleLabel"
-                           Text=""
-                           FontSize="{DynamicResource FontSizeSmall}"
-                           Foreground="{DynamicResource BrushSecondaryText}"
-                           TextTrimming="CharacterEllipsis" />
-            </StackPanel>
+            <TextBlock Grid.Column="0" x:Name="TitleLabel"
+                       Text="Документ"
+                       VerticalAlignment="Center" Margin="0,0,8,0"
+                       FontSize="{DynamicResource FontSizeLarge}"
+                       FontWeight="{StaticResource FontWeightBold}"
+                       TextTrimming="CharacterEllipsis" />
 
             <ToggleButton Grid.Column="1" x:Name="ListPanelBtn" Classes="navbtn"
                           Width="30" Height="30"
@@ -143,21 +135,10 @@
 
         <Border Grid.Row="3" Classes="separator h" />
 
-        <!-- ── Что показано не целиком ──────────────────────────────────────── -->
-        <!-- Потолок страниц тома и скан без текстового слоя. Строка видна, только когда есть о
-             чем сказать, и стоит НАД страницами, а не в их конце: до конца обрезанного тома
-             человек может и не долистать, а прочитать обрезанное как целое — легко. -->
-        <TextBlock Grid.Row="4" x:Name="CutLabel"
-                   IsVisible="False"
-                   Margin="16,8,16,0"
-                   TextWrapping="Wrap"
-                   FontSize="{DynamicResource FontSizeSmall}"
-                   Foreground="{DynamicResource BrushSecondaryText}" />
-
         <!-- ── Тело: страницы документа ─────────────────────────────────────── -->
         <!-- Полоса прокрутки вынесена отдельной колонкой и прилегает к правому краю панели:
              своя полоса списка жила бы внутри его отступов и отошла бы от края. -->
-        <Grid Grid.Row="5" ColumnDefinitions="*,Auto">
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
             <!-- Страницы документа. Серая подложка — как лист бумаги на столе: белую страницу
                  на белом фоне не видно вовсе. -->
             <ListBox Grid.Column="0" x:Name="PagesList"
@@ -184,6 +165,23 @@
                        VerticalAlignment="Center"
                        TextAlignment="Center"
                        Foreground="{DynamicResource BrushSecondaryText}" />
+
+            <!-- Сообщение закреплено поверх страниц у нижнего края и не уезжает с ними. -->
+            <Border Grid.Column="0" x:Name="NoteIsland"
+                    IsVisible="{Binding #CutLabel.IsVisible}"
+                    IsHitTestVisible="False"
+                    HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                    Margin="16,0,16,16" Padding="12,8"
+                    Background="{DynamicResource BrushBg}"
+                    BorderBrush="{DynamicResource BrushSeparator}"
+                    BorderThickness="{DynamicResource BorderLine}"
+                    CornerRadius="{StaticResource RadiusMedium}"
+                    BoxShadow="0 4 16 0 #22000000">
+                <TextBlock x:Name="CutLabel" IsVisible="False"
+                           TextWrapping="Wrap" TextAlignment="Center"
+                           FontSize="{DynamicResource FontSizeSmall}"
+                           Foreground="{DynamicResource BrushSecondaryText}" />
+            </Border>
         </Grid>
     </Grid>
 

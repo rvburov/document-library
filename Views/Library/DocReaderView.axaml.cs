@@ -205,11 +205,10 @@ public partial class DocReaderView : UserControl
     /// Показать документ. <paramref name="query"/> — запрос поиска раздела: панель открывается
     /// сразу на первом совпадении, потому что человек нажал «Прочитать» именно ради него.
     /// </summary>
-    public void Show(DocItem doc, string query, string sourceName)
+    public void Show(DocItem doc, string query)
     {
         Document = doc;
         TitleLabel.Text    = doc.Title;
-        SubtitleLabel.Text = Subtitle(doc, sourceName);
         FindBox.Text       = query ?? "";
         _query             = FindBox.Text ?? "";
         _findDebounce.Stop();
@@ -243,7 +242,6 @@ public partial class DocReaderView : UserControl
         Document = null;
         Reset();
         TitleLabel.Text    = "Документ";
-        SubtitleLabel.Text = "";
         ShowState("");
     }
 
@@ -292,15 +290,6 @@ public partial class DocReaderView : UserControl
         UpdateCounter();
     }
 
-    // Подпись говорит, ЧТО открыто: имя файла и где он лежит — источник и папка в нем.
-    private static string Subtitle(DocItem doc, string sourceName)
-    {
-        var parts = new List<string> { doc.FileName };
-        if (sourceName.Length > 0) parts.Add(sourceName);
-        if (doc.Folder.Length > 0) parts.Add(doc.Folder.Replace("/", " · "));
-        return string.Join(" · ", parts);
-    }
-
     // ── Страницы ──────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -320,7 +309,7 @@ public partial class DocReaderView : UserControl
     }
 
     /// <summary>
-    /// Строка над страницами: что показано не все (<see cref="DocCutNote"/>) и что у скана без
+    /// Плашка внизу панели: что показано не все (<see cref="DocCutNote"/>) и что у скана без
     /// текстового слоя искать на листах нечего — иначе пустой счетчик «нет» выглядел бы
     /// поломкой поиска. Пока на месте страниц стоит надпись, строки нет.
     /// </summary>

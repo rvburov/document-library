@@ -235,6 +235,13 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     [ObservableProperty] private string _query = "";
 
+    partial void OnQueryChanged(string value)
+    {
+        // Запуск нового поиска остается явным, но удаление запроса сразу снимает прежнюю
+        // выдачу и отменяет незавершенный поиск — без Enter или отдельного крестика.
+        if (string.IsNullOrWhiteSpace(value)) Search("");
+    }
+
     /// <summary>Запрос, по которому собрана лента; пусто — поиска нет.</summary>
     [ObservableProperty] private string _appliedQuery = "";
 
@@ -270,8 +277,8 @@ public sealed partial class LibraryViewModel : ObservableObject
 
     public void ClearSearch()
     {
-        Query = "";
-        ApplySearch();
+        if (Query.Length > 0) Query = "";
+        else ApplySearch();
     }
 
     // ── Лента ─────────────────────────────────────────────────────────────────

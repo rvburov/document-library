@@ -670,6 +670,9 @@ public sealed class DocTextIndex
         var result = new List<DocHit>();
         var match  = BuildMatch(query);
         if (match.Length == 0) return result;
+        var tokens = DocHighlight.Tokens(query);
+        var phrase = tokens.Count(token => DocHighlight.Parts(token).Length > 0) > 1;
+        limit = Math.Max(1, limit);
 
         lock (_lock)
         {
@@ -677,20 +680,51 @@ public sealed class DocTextIndex
             using var cmd = connection.CreateCommand();
             cmd.CommandText = $"""
                 SELECT f.PathKey, snippet(doc_fts, 0, char({(int)HitOpen}), char({(int)HitClose}), '…', {words})
+                       {(phrase ? ", doc_fts.Text" : "")}
                 FROM doc_fts
                 JOIN doc_files f ON f.Id = doc_fts.rowid
                 WHERE doc_fts MATCH @q
                 ORDER BY rank
-                LIMIT @lim
+                {(phrase ? "" : "LIMIT @lim")}
                 """;
             cmd.Parameters.AddWithValue("@q",   match);
-            cmd.Parameters.AddWithValue("@lim", Math.Max(1, limit));
+            if (!phrase) cmd.Parameters.AddWithValue("@lim", limit);
 
             using var rdr = cmd.ExecuteReader();
-            while (rdr.Read())
-                result.Add(new DocHit(rdr.GetString(0), rdr.IsDBNull(1) ? "" : rdr.GetString(1)));
+            while (result.Count < limit && rdr.Read())
+            {
+                var snippet = rdr.IsDBNull(1) ? "" : rdr.GetString(1);
+                if (phrase)
+                {
+                    // FTS отбирает кандидатов по всем словам. Порядок и соседство проверяем
+                    // общей логикой с панелью чтения, до применения лимита выдачи.
+                    var text = rdr.GetString(2);
+                    var hits = DocHighlight.Find(text, tokens);
+                    if (hits.Count == 0) continue;
+                    snippet = PhraseSnippet(text, hits[0], words);
+                }
+                result.Add(new DocHit(rdr.GetString(0), snippet));
+            }
         }
         return result;
+    }
+
+    private static string PhraseSnippet(string text, DocHighlight.Hit hit, int words)
+    {
+        var start = hit.Start;
+        var end = hit.End;
+        for (var i = 0; i < words / 2 && start > 0; i++)
+        {
+            while (start > 0 && char.IsWhiteSpace(text[start - 1])) start--;
+            while (start > 0 && !char.IsWhiteSpace(text[start - 1])) start--;
+        }
+        for (var i = 0; i < words / 2 && end < text.Length; i++)
+        {
+            while (end < text.Length && char.IsWhiteSpace(text[end])) end++;
+            while (end < text.Length && !char.IsWhiteSpace(text[end])) end++;
+        }
+        return (start > 0 ? "…" : "") + text[start..hit.Start] + HitOpen + text[hit.Start..hit.End]
+             + HitClose + text[hit.End..end] + (end < text.Length ? "…" : "");
     }
 
     /// <summary>Фоновый поиск: файл кеша читается с диска, UI-поток ждать не должен.</summary>
@@ -699,7 +733,8 @@ public sealed class DocTextIndex
         Task.Run(() => Search(query, limit, words));
 
     /// <summary>
-    /// Собирает выражение MATCH из пользовательского запроса. Каждое слово идет фразой в
+    /// Собирает выражение MATCH для отбора кандидатов. Целую фразу затем проверяет
+    /// <see cref="DocHighlight.Find"/>. Каждое слово идет фразой в
     /// двойных кавычках (внутренние удваиваются) — так спецсимволы синтаксиса FTS5
     /// (<c>* : ^ - NEAR OR</c>) перестают быть синтаксисом. Последнему слову приписывается
     /// <c>*</c>: человек, набравший «автоматизир», ожидает найти «автоматизированных».

@@ -128,7 +128,8 @@ try
     vm.Cards[0].IsSelected = true;
     vm.Cards[1].IsSelected = true;
     Pump(TimeSpan.FromMilliseconds(300));
-    Check(vm.SelectedText == "Выбрано 2" && Texts(feed).Contains("Выбрано 2"), "панель действий с выбранными");
+    Check(vm.SelectedCount == 2 && !Texts(feed).Contains("Выбрано 2") && !Texts(feed).Contains("Копировать в папку"),
+          "выбор двух документов не показывает нижнюю плашку действий");
     Shot(window, "05-feed-selection");
     vm.ClearSelection();
 
@@ -179,17 +180,64 @@ try
     Pump(TimeSpan.FromSeconds(1));
     Shot(window, "07-reader-next-hit");
 
-    // Скан без текстового слоя: страницы есть, искать на них нечего — строка над листами
-    // говорит об этом, а не оставляет человека с пустым счетчиком.
+    Console.WriteLine("Очистка поиска клавиатурой");
+    var searchBox = feed.GetVisualDescendants().OfType<TextBox>()
+        .Single(b => Equals(b.Watermark, "Найти в документах"));
+    searchBox.Focus();
+    searchBox.SelectAll();
+    window.KeyPress(Key.Back, RawInputModifiers.None, PhysicalKey.Backspace, null);
+    window.KeyRelease(Key.Back, RawInputModifiers.None, PhysicalKey.Backspace, null);
+    Pump(TimeSpan.FromMilliseconds(500));
+    Check(searchBox.Text == "" && vm.Query == "", "запрос удален клавишей Backspace");
+    Check(!vm.Searching && vm.AppliedQuery == "" && vm.Cards.Count == 9,
+          "удаление запроса сразу возвращает все 9 документов без Enter");
+    Check(vm.Cards.All(c => !c.HasSnippet) && !vm.StatusText.StartsWith("Найдено"),
+          "после очистки сняты фрагменты и строка результата поиска");
+    Check(reader.CounterText == "" && reader.FindControl<TextBox>("FindBox")!.Text == "",
+          "очистка поиска снимает запрос и счетчик в открытом документе");
+    // После неуспешной проверки возвращаем исходное состояние для остальных проверок стенда.
+    if (vm.Searching) vm.ClearSearch();
+
+    vm.Query = "договор";
+    vm.ApplySearch();
+    vm.Query = "   ";
+    Pump(TimeSpan.FromMilliseconds(500));
+    Check(!vm.Searching && vm.AppliedQuery == "" && vm.Cards.Count == 9,
+          "пробельный запрос отменяет незавершенный поиск и не возвращает старую выдачу");
     vm.ClearSearch();
-    Until(() => vm.AppliedQuery.Length == 0, "сброс поиска", TimeSpan.FromSeconds(5));
+    Pump(TimeSpan.FromMilliseconds(300));
+
+    // Скан без текстового слоя: страницы есть, искать на них нечего — плашка внизу
+    // говорит об этом, а не оставляет человека с пустым счетчиком.
     var scan = vm.Cards.FirstOrDefault(c => c.Doc.TextState == DocTextState.NoText);
     if (scan is not null)
     {
-        feed.RequestRead(scan);
+        var cardsHost = feed.GetVisualDescendants().OfType<ItemsControl>()
+            .Single(c => c.Name == "CardsHost");
+        cardsHost.ScrollIntoView(scan);
+        Pump(TimeSpan.FromMilliseconds(300));
+        var card = cardsHost.ContainerFromIndex(vm.Cards.ToList().IndexOf(scan))!;
+        var readLink = card.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Text == "Прочитать");
+        var readPoint = readLink.TranslatePoint(new Point(readLink.Bounds.Width / 2, readLink.Bounds.Height / 2), window)!.Value;
+        window.MouseMove(readPoint);
+        window.MouseDown(readPoint, MouseButton.Left);
+        window.MouseUp(readPoint, MouseButton.Left);
         Until(() => reader.Document == scan.Doc && reader.PageCount > 0, "открытие скана", TimeSpan.FromSeconds(30));
+        Check(reader.Document == scan.Doc && reader.Document != manual.Doc,
+              "после очистки нажатие «Прочитать» открывает другой документ вместо прежнего результата");
         Pump(TimeSpan.FromMilliseconds(500));
         Check(reader.NoteText.Contains("Скан без текстового слоя"), $"у скана строка про текстовый слой: {reader.NoteText}");
+        var note = reader.FindControl<TextBlock>("CutLabel")!;
+        var pages = reader.FindControl<ListBox>("PagesList")!;
+        var scroll = pages.GetVisualDescendants().OfType<ScrollViewer>().First();
+        var noteTop = note.TranslatePoint(new Point(), reader)!.Value.Y;
+        Check(noteTop > reader.Bounds.Height / 2, "сообщение о скане находится внизу панели чтения");
+        scroll.Offset = new Vector(0, 500);
+        Pump(TimeSpan.FromMilliseconds(500));
+        Check(scroll.Offset.Y > 0, "страницы скана прокручены");
+        Check(Math.Abs(note.TranslatePoint(new Point(), reader)!.Value.Y - noteTop) < 1,
+              "сообщение о скане закреплено при прокрутке страниц");
+        Shot(window, "07-reader-scan-note");
     }
     else Check(false, "скан в ленте");
 
@@ -214,6 +262,10 @@ try
     {
         sections.Select(keys[i]);
         Pump(TimeSpan.FromMilliseconds(800));
+        var groups = settings.GetVisualDescendants().OfType<Border>()
+            .Where(b => b.IsEffectivelyVisible && b.Classes.Contains("group")).ToList();
+        Check(groups.Count > 0 && groups.All(b => b.Bounds.Width > settings.Bounds.Width - 64),
+              $"блоки настроек на всю ширину: {keys[i]}");
         Shot(window, $"{09 + i:D2}-settings-{i + 1}");
         if (keys[i] == "diagnostics")
             Check(Texts(settings).Any(t => t.StartsWith("Журнал хранится в logs.db")), "диагностика читает журнал");
@@ -232,12 +284,28 @@ try
     Pump(TimeSpan.FromMilliseconds(800));
     Check(reader.IsVisible, "панель чтения осталась открытой после настроек");
     Shot(window, "16-reader-dark");
-    // Кнопка навбара — переключатель: человек нажимает, и он снимает отметку.
+    // Нажатие мышью проверяет доступность кнопки: смена IsChecked из кода не замечает,
+    // что панель документа перекрыла кнопку вместе с правой частью ленты.
     var readerToggle = window.GetVisualDescendants().OfType<ToggleButton>()
         .First(b => b.IsEffectivelyVisible && Equals(ToolTip.GetTip(b), "Закрыть панель чтения"));
-    readerToggle.IsChecked = false;
-    Pump(TimeSpan.FromMilliseconds(800));
-    Check(!reader.IsVisible, "панель чтения закрыта кнопкой навбара");
+    var initialWidth = window.Width;
+    foreach (var width in new[] { initialWidth, 1662, window.MinWidth })
+    {
+        window.Width = width;
+        feed.RequestRead(manual);
+        Pump(TimeSpan.FromMilliseconds(800));
+        var closePoint = readerToggle.TranslatePoint(
+            new Point(readerToggle.Bounds.Width / 2, readerToggle.Bounds.Height / 2), window)!.Value;
+        var readerLeft = reader.TranslatePoint(new Point(), window)!.Value.X;
+        Check(closePoint.X < readerLeft, $"кнопка закрытия слева от панели чтения, окно {width}");
+        window.MouseMove(closePoint);
+        window.MouseDown(closePoint, MouseButton.Left);
+        window.MouseUp(closePoint, MouseButton.Left);
+        Pump(TimeSpan.FromMilliseconds(800));
+        Check(!reader.IsVisible, $"панель чтения закрыта мышью, окно {width}");
+    }
+    window.Width = initialWidth;
+    Pump(TimeSpan.FromMilliseconds(300));
     Shot(window, "17-feed-dark");
 
     window.Close();

@@ -18,6 +18,17 @@ namespace PdfLibrary.Tests.Integration;
 /// </summary>
 public sealed class DocTextIndexTests : IDisposable
 {
+    [Fact]
+    public void Phrase_query_rejects_separated_and_reordered_words_before_applying_limit()
+    {
+        Put(Write("separated.txt", "Буров и Роман"), "Буров и Роман");
+        Put(Write("reversed.txt", "Роман Буров"), "Роман Буров");
+        Put(Write("longer.txt", "Буров Романов"), "Буров Романов");
+        Put(Write("phrase.txt", "Заявитель Буров Роман Викторович"), "Заявитель Буров Роман Викторович");
+        var hit = Assert.Single(_index.Search("Буров Роман", limit: 1));
+        Assert.Equal("phrase.txt", Path.GetFileName(hit.Path));
+        Assert.Contains(DocTextIndex.SplitSnippet(hit.Snippet), p => p.Hit && p.Text == "Буров Роман");
+    }
     private readonly string _dir;
     private readonly DocTextIndex _index;
 
