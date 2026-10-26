@@ -259,6 +259,65 @@ try
         Shot(window, "08-reader-drawing");
     }
 
+    Console.WriteLine("Минимальная ширина библиотеки");
+    feed.RequestRead(manual);
+    Pump(TimeSpan.FromMilliseconds(300));
+    var libraryGrip = window.FindControl<Border>("ReaderResizeGrip")!;
+    var sidebarGrip = window.FindControl<Border>("ResizeGrip")!;
+    var originalWindowWidth = window.Width;
+    var originalWindowHeight = window.Height;
+    foreach (var width in new[] { 1662.0, 1331.0, window.MinWidth })
+    {
+        window.Width = width;
+        Pump(TimeSpan.FromMilliseconds(200));
+        MouseDrag(window, libraryGrip, new Vector(-2000, 0));
+        CheckLibraryBounds(window, feed, reader, $"окно {width}");
+        var limitX = reader.TranslatePoint(default, window)!.Value.X;
+        MouseDrag(window, libraryGrip, new Vector(-250, 0));
+        Check(Math.Abs(reader.TranslatePoint(default, window)!.Value.X - limitX) < 2,
+              $"ручка останавливается на минимуме библиотеки, окно {width}");
+        MouseDrag(window, libraryGrip, new Vector(2000, 0));
+        Check(reader.Bounds.Width >= AppSettings.ReaderWidthMin - 1,
+              $"при обратном движении сохраняется минимум документа, окно {width}");
+        CheckLibraryBounds(window, feed, reader, $"узкий документ, окно {width}");
+    }
+    window.Width = 1331;
+    Pump(TimeSpan.FromMilliseconds(200));
+    MouseDrag(window, sidebarGrip, new Vector(2000, 0));
+    CheckLibraryBounds(window, feed, reader, "боковая панель расширена до предела");
+    MouseDrag(window, sidebarGrip, new Vector(220 - sidebar.Bounds.Width, 0));
+    foreach (var scale in new[] { 0.9, 1.1, 1.25 })
+    {
+        Scaling.Set(scale);
+        Pump(TimeSpan.FromMilliseconds(250));
+        window.Width = window.MinWidth;
+        Pump(TimeSpan.FromMilliseconds(250));
+        MouseDrag(window, libraryGrip, new Vector(-2000, 0));
+        CheckLibraryBounds(window, feed, reader, $"минимальное окно, масштаб {scale:P0}");
+    }
+    Scaling.Set(1);
+    window.Width = 1662;
+    window.Height = 1000;
+    Pump(TimeSpan.FromMilliseconds(300));
+    MouseDrag(window, sidebarGrip, new Vector(220 - sidebar.Bounds.Width, 0));
+    MouseDrag(window, libraryGrip, new Vector(-2000, 0));
+    FontScale.SetDelta(3);
+    Pump(TimeSpan.FromMilliseconds(300));
+    CheckLibraryBounds(window, feed, reader, "максимальный размер шрифта");
+    FontScale.SetDelta(0);
+    Pump(TimeSpan.FromMilliseconds(300));
+    CheckLibraryBounds(window, feed, reader, "кадр для проверки минимальной ширины");
+    Shot(window, "18-library-min-width");
+    var expandDocument = reader.FindControl<ToggleButton>("ListPanelBtn")!;
+    MouseTap(window, expandDocument, new Point(expandDocument.Bounds.Width / 2, expandDocument.Bounds.Height / 2));
+    Check(!feed.IsVisible && reader.Bounds.Width > 1000, "документ разворачивается на всю рабочую область");
+    MouseTap(window, expandDocument, new Point(expandDocument.Bounds.Width / 2, expandDocument.Bounds.Height / 2));
+    CheckLibraryBounds(window, feed, reader, "список восстановлен после разворота документа");
+    MouseDrag(window, libraryGrip, new Vector(520 - reader.Bounds.Width, 0) * -1);
+    window.Width = originalWindowWidth;
+    window.Height = originalWindowHeight;
+    Pump(TimeSpan.FromMilliseconds(300));
+
     Console.WriteLine("Настройки");
     Click(window, null, "Настройки");
     Pump(TimeSpan.FromMilliseconds(500));
@@ -575,6 +634,36 @@ void MouseDrag(Window window, Visual target, Vector delta)
     window.MouseMove(p + delta);
     window.MouseUp(p + delta, MouseButton.Left);
     Pump(TimeSpan.FromMilliseconds(150));
+}
+
+void CheckLibraryBounds(Window window, LibraryView feed, DocReaderView reader, string context)
+{
+    var libraryLeft = feed.TranslatePoint(default, window)!.Value.X;
+    var libraryRight = libraryLeft + feed.Bounds.Width * Scaling.Current;
+    var readerLeft = reader.TranslatePoint(default, window)!.Value.X;
+    var readerRight = readerLeft + reader.Bounds.Width * Scaling.Current;
+    Check(feed.Bounds.Width >= 639, $"библиотека не уже 640: {context}");
+    var contained = libraryRight <= readerLeft + 1 && readerRight <= window.Bounds.Width + 1;
+    if (!contained)
+        Console.WriteLine($"  Границы: библиотека {libraryLeft:0.##}–{libraryRight:0.##}, документ {readerLeft:0.##}–{readerRight:0.##}, окно {window.Bounds.Width:0.##}");
+    Check(contained,
+          $"библиотека и документ рядом и в пределах окна: {context}");
+    var controls = feed.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible).ToList();
+    var names = new[] { "NavbarControl", "TitleLabel", "SortSelector", "TypeBtn", "ReaderBtn", "SearchBlock", "SearchBox", "FindBtn", "CardsHost" };
+    var fits = controls.Where(c => names.Contains(c.Name)).All(c =>
+    {
+        var left = c.TranslatePoint(default, feed)!.Value.X;
+        return left >= -1 && left + c.Bounds.Width <= feed.Bounds.Width + 1;
+    });
+    var cards = controls.OfType<ItemsControl>().Single(c => c.Name == "CardsHost");
+    fits &= cards.GetVisualDescendants().OfType<TextBlock>().Where(c => c.IsEffectivelyVisible).All(c =>
+    {
+        var left = c.TranslatePoint(default, feed)!.Value.X;
+        return left >= -1 && left + c.Bounds.Width <= feed.Bounds.Width + 1;
+    });
+    Check(fits, $"поиск, кнопки и содержимое карточек помещаются в библиотеку: {context}");
+    Check(feed.GetVisualDescendants().OfType<NavbarLibrary>().Single().Bounds.Width >= feed.Bounds.Width - 1,
+          $"шапка растянута по ширине библиотеки: {context}");
 }
 
 void OpenLogFilter(Window window, SettingsView settings, string key)

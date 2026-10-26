@@ -42,6 +42,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         _library = library;
         _vm = new LibraryViewModel(library);
+        RootGrid.SizeChanged += (_, e) =>
+        {
+            if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.01) ApplyColumns();
+        };
 
         AppNotifications.Install(this);
 
@@ -191,6 +195,11 @@ public partial class MainWindow : Window
 
     private const double SidebarMin = 180;
     private const double SidebarMax = 500;
+    internal const double LibraryContentMinWidth = 640;
+
+    // Верхние пределы зависят от окна: у каждой соседней панели остается ее минимум.
+    private double _sidebarWidthLimit = SidebarMax;
+    private double _readerWidthLimit = AppSettings.ReaderWidthMax;
 
     private void OnSidebarToggled(bool isOpen)
     {
@@ -216,12 +225,29 @@ public partial class MainWindow : Window
         // Ленту можно свернуть стрелкой в шапке документа — документ во всю ширину.
         var collection = !reader || _libraryContentOpen;
 
+        var line = LineMetrics.ThicknessFor(RootGrid);
+        var activityWidth = 48 + line;
+        var contentMin = inLibrary && collection ? LibraryContentMinWidth : 0;
+        var readerMin = reader ? AppSettings.ReaderWidthMin : 0;
+        var divider = collection && reader ? line : 0;
+        // Если все минимумы не помещаются, ограничиваем сужение самого окна. Боковую панель
+        // разрешено сжать до SidebarMin, но лента и документ остаются рядом и целиком в окне.
+        var minimumWidth = (activityWidth + (sidebar ? SidebarMin : 0) + contentMin + readerMin + divider)
+                           * Scaling.Current;
+        MinWidth = Math.Max(960, Math.Ceiling(minimumWidth * RenderScaling) / RenderScaling);
+        var layoutWidth = RootGrid.Bounds.Width > 0 ? RootGrid.Bounds.Width : Width / Scaling.Current;
+        _sidebarWidthLimit = Math.Clamp(layoutWidth - activityWidth - contentMin - readerMin - divider,
+                                       SidebarMin, SidebarMax);
+        var sidebarWidth = sidebar ? Math.Clamp(_lastSidebarWidth, SidebarMin, _sidebarWidthLimit) : 0;
+        _readerWidthLimit = Math.Clamp(layoutWidth - activityWidth - sidebarWidth - contentMin - divider,
+                                      AppSettings.ReaderWidthMin, AppSettings.ReaderWidthMax);
+
         // ── Сайдбар (col 2) ──
         if (sidebar)
         {
             cols[2].MinWidth = SidebarMin;
-            cols[2].MaxWidth = SidebarMax;
-            cols[2].Width    = new GridLength(_lastSidebarWidth, GridUnitType.Pixel);
+            cols[2].MaxWidth = _sidebarWidthLimit;
+            cols[2].Width    = new GridLength(sidebarWidth, GridUnitType.Pixel);
         }
         else
         {
@@ -232,13 +258,15 @@ public partial class MainWindow : Window
         SidebarSeparator.IsVisible = sidebar;
 
         // ── Контент (col 3) | разделитель (col 4) | панель чтения (col 5) ──
+        cols[3].MinWidth = contentMin;
         if (collection && reader)            // обе панели открыты
         {
             cols[3].Width    = new GridLength(1, GridUnitType.Star);
             cols[4].Width    = GridLength.Auto;
             cols[5].MinWidth = AppSettings.ReaderWidthMin;
-            cols[5].MaxWidth = AppSettings.ReaderWidthMax;
-            cols[5].Width    = new GridLength(_readerWidth, GridUnitType.Pixel);
+            cols[5].MaxWidth = _readerWidthLimit;
+            cols[5].Width    = new GridLength(Math.Clamp(_readerWidth, AppSettings.ReaderWidthMin, _readerWidthLimit),
+                                             GridUnitType.Pixel);
         }
         else if (collection)                 // только лента → во всю ширину
         {
@@ -252,15 +280,13 @@ public partial class MainWindow : Window
         {
             cols[3].Width    = new GridLength(0);
             cols[4].Width    = new GridLength(0);
-            cols[5].MinWidth = 0;
+            cols[5].MinWidth = AppSettings.ReaderWidthMin;
             cols[5].MaxWidth = double.PositiveInfinity;
             cols[5].Width    = new GridLength(1, GridUnitType.Star);
         }
 
         // ── Видимость блоков ──
-        // Лента сохраняет всю ширину рабочей области: панель чтения закрывает часть списка, а не
-        // сжимает карточки и поиск.
-        Grid.SetColumnSpan(ModulesHost, inLibrary && collection && reader ? 3 : 1);
+        // Лента занимает только свою колонку: поиск и карточки перестраиваются по ее ширине.
         LibraryModule.IsVisible  = inLibrary && collection;
         LibraryReader.SetListPanelOpen(_libraryContentOpen);
         LibraryReader.IsVisible  = reader;
@@ -282,7 +308,7 @@ public partial class MainWindow : Window
         var col = RootGrid.ColumnDefinitions[2];
         _gripDragging   = true;
         _gripStartX     = e.GetPosition(RootGrid).X;
-        _gripStartWidth = col.Width.IsAbsolute ? col.Width.Value : col.ActualWidth;
+        _gripStartWidth = col.ActualWidth;
         e.Pointer.Capture((IInputElement?)sender);
         e.Handled = true;
     }
@@ -292,10 +318,9 @@ public partial class MainWindow : Window
         if (!_gripDragging) return;
 
         var dx       = e.GetPosition(RootGrid).X - _gripStartX;
-        var newWidth = Math.Clamp(_gripStartWidth + dx, SidebarMin, SidebarMax);
-
-        RootGrid.ColumnDefinitions[2].Width = new GridLength(newWidth, GridUnitType.Pixel);
+        var newWidth = Math.Clamp(_gripStartWidth + dx, SidebarMin, _sidebarWidthLimit);
         _lastSidebarWidth = newWidth;
+        ApplyColumns();
     }
 
     private void OnGripReleased(object? sender, PointerReleasedEventArgs e)
@@ -316,7 +341,7 @@ public partial class MainWindow : Window
         var col = RootGrid.ColumnDefinitions[5];
         _readerGripDragging   = true;
         _readerGripStartX     = e.GetPosition(RootGrid).X;
-        _readerGripStartWidth = col.Width.IsAbsolute ? col.Width.Value : col.ActualWidth;
+        _readerGripStartWidth = col.ActualWidth;
         e.Pointer.Capture((IInputElement?)sender);
         e.Handled = true;
     }
@@ -327,10 +352,9 @@ public partial class MainWindow : Window
 
         // Тянем за левый край — движение мыши вправо уменьшает ширину панели.
         var dx       = e.GetPosition(RootGrid).X - _readerGripStartX;
-        var newWidth = Math.Clamp(_readerGripStartWidth - dx, AppSettings.ReaderWidthMin, AppSettings.ReaderWidthMax);
-
-        RootGrid.ColumnDefinitions[5].Width = new GridLength(newWidth, GridUnitType.Pixel);
-        _readerWidth = (int)newWidth;
+        var newWidth = Math.Clamp(_readerGripStartWidth - dx, AppSettings.ReaderWidthMin, _readerWidthLimit);
+        _readerWidth = (int)Math.Floor(newWidth);
+        ApplyColumns();
     }
 
     private void OnReaderGripReleased(object? sender, PointerReleasedEventArgs e)
@@ -409,8 +433,11 @@ public partial class MainWindow : Window
 
     // Масштаб всего интерфейса: LayoutTransform на корне — содержимое перекомпоновывается в
     // логических пикселях и заполняет окно. 100 % → без трансформации (быстрый общий путь).
-    private void ApplyScale(double scale) =>
+    private void ApplyScale(double scale)
+    {
         ScaleHost.LayoutTransform = Math.Abs(scale - 1.0) < 0.001 ? null : new ScaleTransform(scale, scale);
+        ApplyColumns();
+    }
 
     private void OnWindowKey(object? sender, KeyEventArgs e)
     {

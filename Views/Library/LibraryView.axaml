@@ -2,17 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:comp="using:PdfLibrary.Controls.Components"
              xmlns:lib="using:PdfLibrary.Views.Library"
-             x:Class="PdfLibrary.Views.Library.LibraryView"
-             x:Name="LibraryRoot">
+             x:Class="PdfLibrary.Views.Library.LibraryView">
 
     <!-- Раздел «Лента»: навбар и лента карточек. -->
     <Grid RowDefinitions="Auto,*">
 
         <!-- Навбар: заголовок, порядок, тип документа, панель чтения. Линию под навбаром не
              рисуем — ее рисует MainWindow. -->
-        <comp:NavbarLibrary Grid.Row="0" x:Name="NavbarControl"
-                            HorizontalAlignment="Left"
-                            Width="{Binding #LibraryRoot.ViewportWidth}" />
+        <comp:NavbarLibrary Grid.Row="0" x:Name="NavbarControl" />
 
         <lib:DocListView Grid.Row="1" x:Name="DocList" />
 

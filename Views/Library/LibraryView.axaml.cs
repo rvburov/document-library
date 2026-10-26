@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using PdfLibrary.Services;
 using PdfLibrary.Views.Dialogs;
@@ -12,16 +11,6 @@ namespace PdfLibrary.Views.Library;
 /// </summary>
 public partial class LibraryView : UserControl
 {
-    public static readonly StyledProperty<double> ViewportWidthProperty =
-        AvaloniaProperty.Register<LibraryView, double>(nameof(ViewportWidth), double.NaN);
-
-    /// <summary>Ширина видимой части ленты: кнопки навбара не должны уходить под документ.</summary>
-    public double ViewportWidth
-    {
-        get => GetValue(ViewportWidthProperty);
-        set => SetValue(ViewportWidthProperty, value);
-    }
-
     /// <summary>«Прочитать» в карточке, двойной щелчок по ней или Enter — открыть панель чтения.</summary>
     public event Action<CardViewModel>? ReadRequested;
 

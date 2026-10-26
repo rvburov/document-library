@@ -59,10 +59,8 @@
                 HorizontalAlignment="Right" />
 
         <!-- Основная область: лента, настройки или первый запуск. -->
-        <Border Grid.Column="3" x:Name="CollectionViewport" IsHitTestVisible="False" />
-        <Grid Grid.Column="3" x:Name="ModulesHost">
-            <lib:LibraryView x:Name="LibraryModule"
-                             ViewportWidth="{Binding #CollectionViewport.Bounds.Width}" />
+        <Grid Grid.Column="3" x:Name="ModulesHost" ClipToBounds="True">
+            <lib:LibraryView x:Name="LibraryModule" />
             <settings:SettingsView x:Name="SettingsModule" IsVisible="False" />
             <welcome:WelcomeView x:Name="WelcomeModule" IsVisible="False" />
         </Grid>
