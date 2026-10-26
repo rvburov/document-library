@@ -487,10 +487,6 @@
 
                     <!-- ══ Оформление ═════════════════════════════════════════ -->
                     <StackPanel x:Name="Look" IsVisible="False">
-                        <TextBlock Classes="h2" Text="ТЕМА" />
-                        <StackPanel x:Name="ThemeTiles" Orientation="Horizontal" Spacing="12" />
-                        <TextBlock Classes="note" Text="Страницы PDF в панели чтения остаются белыми в любой теме — как бумага." />
-
                         <TextBlock Classes="h2" Text="РАЗМЕРЫ" />
                         <Border Classes="group">
                             <StackPanel>

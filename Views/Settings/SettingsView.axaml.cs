@@ -348,53 +348,6 @@ public partial class SettingsView : UserControl
 
     private void BuildLookControls()
     {
-        ThemeTiles.Children.Clear();
-        foreach (var (theme, title, bar, side, main, sep) in new[]
-                 {
-                     (AppTheme.Light, "Светлая", "#F2F2F7", "#FFFFFF", "#FFFFFF", "#E5E5EA"),
-                     (AppTheme.Dark, "Темная", "#262629", "#1C1C1E", "#1C1C1E", "#38383C"),
-                     (AppTheme.Auto, "Как в системе", "#F2F2F7", "#FFFFFF", "#1C1C1E", "#8E8E93"),
-                 })
-        {
-            var on = AppSettings.Theme == theme;
-            var preview = new Border
-            {
-                Width = 150, Height = 92, CornerRadius = new CornerRadius(8), ClipToBounds = true,
-                BorderThickness = new Thickness(on ? 2 : 1),
-                BorderBrush = Res.Brush(on ? "BrushAccent" : "BrushSeparator"),
-                Child = new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("18,42,*"),
-                    Children =
-                    {
-                        new Border { Background = Brush.Parse(bar) },
-                        Column(new Border { Background = Brush.Parse(side), BorderBrush = Brush.Parse(sep), BorderThickness = new Thickness(1, 0) }, 1),
-                        Column(new Border { Background = Brush.Parse(main) }, 2),
-                    },
-                },
-            };
-            var label = new TextBlock
-            {
-                Text = title, HorizontalAlignment = HorizontalAlignment.Center,
-                FontWeight = on ? FontWeight.SemiBold : FontWeight.Normal,
-                Foreground = Res.Brush(on ? "BrushAccent" : "BrushPrimaryText"),
-            };
-            // Плитка — не кнопка: у кнопки Fluent свой фон под мышью, а плитке он не нужен.
-            var tile = new StackPanel
-            {
-                Spacing = 6, Background = Brushes.Transparent,
-                Cursor = new Cursor(StandardCursorType.Hand),
-                Children = { preview, label },
-            };
-            tile.Tapped += (_, _) =>
-            {
-                AppSettings.Theme = theme;
-                ThemeManager.Apply(theme);
-                BuildLookControls();
-            };
-            ThemeTiles.Children.Add(tile);
-        }
-
         ScaleSegment.Children.Clear();
         foreach (var scale in ScaleOptions)
             ScaleSegment.Children.Add(Segment($"{scale * 100:0}%", Math.Abs(scale - Scaling.Current) < 0.001, () =>
@@ -414,12 +367,6 @@ public partial class SettingsView : UserControl
         var font  = Application.Current is { } app && app.TryFindResource("FontSizeBase", out var b) && b is double fb ? fb : 12;
         var small = Application.Current is { } app2 && app2.TryFindResource("FontSizeSmall", out var sm) && sm is double fs ? fs : 10;
         SampleNote.Text = $"Масштаб {Scaling.Current * 100:0}% · основной текст {font:0} px, мелкий {small:0} px";
-    }
-
-    private static Control Column(Control control, int column)
-    {
-        Grid.SetColumn(control, column);
-        return control;
     }
 
     // Сегмент выбора — как «Текст / Как в документе» в панели чтения: обертка Border.modeseg

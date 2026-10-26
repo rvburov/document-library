@@ -269,6 +269,14 @@ try
         Shot(window, $"{09 + i:D2}-settings-{i + 1}");
         if (keys[i] == "diagnostics")
             Check(Texts(settings).Any(t => t.StartsWith("Журнал хранится в logs.db")), "диагностика читает журнал");
+        if (keys[i] == "look")
+        {
+            var labels = Texts(settings).ToHashSet();
+            Check(!labels.Overlaps(["ТЕМА", "Светлая", "Темная", "Как в системе"]),
+                  "в оформлении нет выбора цветовой темы");
+            Check(labels.Contains("Масштаб интерфейса") && labels.Contains("Размер шрифта") && labels.Contains("ПРИМЕР ТЕКСТА"),
+                  "остальные пункты оформления сохранены");
+        }
     }
 
     Check(Math.Abs(Scaling.Current - 1) < 0.001, $"открытие настроек не меняет масштаб ({Scaling.Current:P0})");
