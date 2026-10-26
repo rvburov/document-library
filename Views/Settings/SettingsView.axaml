@@ -42,6 +42,9 @@
         <Style Selector="Border.srow TextBox">
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+        <Style Selector="StackPanel#Look ToggleButton.modeseg">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeBase}" />
+        </Style>
 
         <!-- Заголовок группы: «ЗАПУСК И РАБОТА В ФОНЕ». -->
         <Style Selector="TextBlock.h2">
