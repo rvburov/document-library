@@ -22,6 +22,7 @@ using PdfLibrary.Core.Documents;
 using PdfLibrary.Database;
 using PdfLibrary.Database.DocIndex;
 using PdfLibrary.Services;
+using PdfLibrary.Setup;
 using PdfLibrary.Tests.Screens;
 using PdfLibrary.Utils;
 using PdfLibrary.Views;
@@ -29,6 +30,7 @@ using Avalonia.Controls.Primitives;
 using PdfLibrary.Controls.Components;
 using PdfLibrary.Views.Library;
 using PdfLibrary.Views.Settings;
+using PdfLibrary.Views.Dialogs;
 
 var data = Path.Combine(Path.GetTempPath(), "pl-screens-" + Guid.NewGuid().ToString("N")[..8]);
 Environment.SetEnvironmentVariable(AppSettings.DataDirVariable, Path.Combine(data, "appdata"));
@@ -278,6 +280,46 @@ try
                   "остальные пункты оформления сохранены");
         }
     }
+
+    Console.WriteLine("Ручная проверка обновления");
+    var updateFolder = Path.Combine(data, "update-check");
+    Directory.CreateDirectory(updateFolder);
+    var updateFile = InstallService.IsMac
+        ? InstallService.MacInnerBinary(Path.Combine(updateFolder, InstallService.AppBundleName))
+        : Path.Combine(updateFolder, InstallService.AppExeName);
+    Directory.CreateDirectory(Path.GetDirectoryName(updateFile)!);
+    File.Copy(Environment.ProcessPath!, updateFile);
+    File.SetLastWriteTimeUtc(updateFile, DateTime.UtcNow.AddMinutes(1));
+    Check(UpdateService.Check(updateFolder).Result == UpdateCheck.Available, "подготовлена новая сборка для проверки обновления");
+    var settingsVm = (SettingsViewModel)settings.DataContext!;
+    settingsVm.UpdateFolder = updateFolder;
+    var checkUpdate = settings.FindControl<Button>("CheckUpdateButton")!;
+    var dialogs = Find<DialogHost>(window)!;
+    Click(settings, "Проверить");
+    Until(() => dialogs.IsOpen || checkUpdate.IsEnabled, "проверка обновления", TimeSpan.FromSeconds(10));
+    var updatePrompt = Find<ConfirmPanel>(window);
+    Check(dialogs.IsOpen && updatePrompt is not null && !checkUpdate.IsEnabled,
+          "кнопка «Проверить» сразу открывает окно обновления и остается недоступной до его закрытия");
+    Check(!settings.FindControl<StackPanel>("UpdateStatus")!.IsVisible,
+          "новая сборка не выводится отдельной строкой со ссылкой «Обновить»");
+    if (updatePrompt is not null)
+    {
+        Shot(window, "14a-update-confirmation");
+        Click(updatePrompt, "Отмена");
+        Pump(TimeSpan.FromMilliseconds(200));
+        Check(!dialogs.IsOpen && checkUpdate.IsEnabled, "отмена закрывает окно обновления и возвращает кнопку проверки");
+    }
+    settingsVm.UpdateFolder = Path.Combine(data, "missing-update-folder");
+    Click(settings, "Проверить");
+    Until(() => checkUpdate.IsEnabled, "проверка недоступной папки обновлений", TimeSpan.FromSeconds(10));
+    Check(!dialogs.IsOpen && Texts(settings).Any(t => t.StartsWith("Папка обновлений недоступна")),
+          "ошибка проверки показана в настройках без предложения обновиться");
+    File.SetLastWriteTimeUtc(updateFile, File.GetLastWriteTimeUtc(Environment.ProcessPath!));
+    settingsVm.UpdateFolder = updateFolder;
+    Click(settings, "Проверить");
+    Until(() => checkUpdate.IsEnabled, "проверка актуальной сборки", TimeSpan.FromSeconds(10));
+    Check(!dialogs.IsOpen && Texts(settings).Any(t => t.StartsWith("Установлена последняя версия")),
+          "актуальная сборка не открывает окно обновления");
 
     Check(Math.Abs(Scaling.Current - 1) < 0.001, $"открытие настроек не меняет масштаб ({Scaling.Current:P0})");
     Check(FontScale.Delta == 0, $"открытие настроек не меняет размер шрифта ({FontScale.Delta})");

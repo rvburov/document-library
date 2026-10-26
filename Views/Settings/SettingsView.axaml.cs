@@ -68,7 +68,6 @@ public partial class SettingsView : UserControl
     private string _levelFilter = "all";
     private LogReader.LogQuery _logQuery = new();
     private readonly List<LogRowView> _logRows = [];
-    private UpdateInfo? _update;
     private bool _syncing;
 
     private const int LogPage = 200;
@@ -509,18 +508,22 @@ public partial class SettingsView : UserControl
     {
         _vm.SaveUpdateFolder();
         CheckUpdateButton.IsEnabled = false;
-        ApplyUpdateButton.IsVisible = false;
         UpdateStatus.IsVisible = true;
         UpdateIcon.IsVisible = false;
         UpdateText.Text = "Проверяю…";
         UpdateText.Foreground = Res.Brush("BrushSecondaryText");
         try
         {
-            _update = await UpdateService.CheckAsync(AppSettings.UpdateFolder);
-            UpdateText.Text = _update.Message;
-            UpdateIcon.IsVisible = _update.Result == UpdateCheck.UpToDate;
-            UpdateText.Foreground = Res.Brush(_update.Result == UpdateCheck.Error ? "BrushRed" : "BrushPrimaryText");
-            ApplyUpdateButton.IsVisible = _update.Result == UpdateCheck.Available;
+            var update = await UpdateService.CheckAsync(AppSettings.UpdateFolder);
+            if (update.Result == UpdateCheck.Available)
+            {
+                UpdateStatus.IsVisible = false;
+                await ConfirmAndApplyUpdateAsync(update);
+                return;
+            }
+            UpdateText.Text = update.Message;
+            UpdateIcon.IsVisible = update.Result == UpdateCheck.UpToDate;
+            UpdateText.Foreground = Res.Brush(update.Result == UpdateCheck.Error ? "BrushRed" : "BrushPrimaryText");
         }
         finally
         {
@@ -528,24 +531,24 @@ public partial class SettingsView : UserControl
         }
     }
 
-    private async void OnApplyUpdate(object? sender, RoutedEventArgs e)
+    private async Task ConfirmAndApplyUpdateAsync(UpdateInfo update)
     {
-        if (_update?.Artifact is not { } artifact) return;
+        if (update.Artifact is not { } artifact || MainWindow.DialogsOf(this) is not { } dialogs) return;
+        if (await dialogs.ShowAsync(new ConfirmPanel("Обновление",
+                update.Message + " Программа закроется, обновится и снова откроется.", "Обновить")) is not true)
+            return;
+
+        UpdateStatus.IsVisible = true;
         if (InstallService.IsRunningInstalledCopy() != true)
         {
             UpdateText.Text = "Обновлять можно только установленную программу — запустите ее из папки установки.";
             UpdateText.Foreground = Res.Brush("BrushRed");
             return;
         }
-        if (MainWindow.DialogsOf(this) is { } dialogs &&
-            await dialogs.ShowAsync(new ConfirmPanel("Обновление",
-                _update.Message + " Программа закроется, обновится и снова откроется.", "Обновить")) is not true)
-            return;
-        ApplyUpdateButton.IsEnabled = false;
         UpdateText.Text = "Загружаю обновление…";
+        UpdateText.Foreground = Res.Brush("BrushPrimaryText");
         var error = await UpdateService.ApplyAsync(artifact, new Progress<double>(p => UpdateText.Text = $"Загружаю обновление… {p * 100:0} %"));
         if (error is null) return;
-        ApplyUpdateButton.IsEnabled = true;
         UpdateText.Text = error;
         UpdateText.Foreground = Res.Brush("BrushRed");
     }

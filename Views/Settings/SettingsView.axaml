@@ -77,7 +77,7 @@
             <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}" />
         </Style>
 
-        <!-- Ссылка в строке: «Показать еще», «Скопировать», «Обновить». -->
+        <!-- Ссылка в строке: «Показать еще», «Скопировать». -->
         <Style Selector="Button.link">
             <Setter Property="Background"          Value="Transparent" />
             <Setter Property="BorderThickness"     Value="0" />
@@ -623,8 +623,6 @@
                                         <StackPanel x:Name="UpdateStatus" Orientation="Horizontal" Spacing="6" IsVisible="False">
                                             <Viewbox Width="{StaticResource IconSizeSmall}" Height="{StaticResource IconSizeSmall}" x:Name="UpdateIcon" VerticalAlignment="Center"><Canvas Width="24" Height="24"><Path Data="{StaticResource IconCheck}" Stroke="{DynamicResource BrushGreen}" StrokeThickness="{StaticResource IconStrokeMediumBold}" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
                                             <TextBlock x:Name="UpdateText" FontSize="{DynamicResource FontSizeBase}" TextWrapping="Wrap" />
-                                            <Button x:Name="ApplyUpdateButton" Classes="link" FontSize="{DynamicResource FontSizeBase}"
-                                                    Content="Обновить" Click="OnApplyUpdate" IsVisible="False" Margin="8,0,0,0" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
