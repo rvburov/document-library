@@ -192,4 +192,5 @@
     <StreamGeometry x:Key="IconMessageWarning">M2.992 16.342 a2 2 0 0 1 0.094 1.167 l-1.065 3.29 a1 1 0 0 0 1.236 1.168 l3.413 -0.998 a2 2 0 0 1 1.099 0.092 a10 10 0 1 0 -4.777 -4.719 M12 8 v4 M12 16 h0.01</StreamGeometry>
     <StreamGeometry x:Key="IconTriangleAlert">M21.73 18 l-8 -14 a2 2 0 0 0 -3.48 0 l-8 14 A2 2 0 0 0 4 21 h16 a2 2 0 0 0 1.73 -3 M12 9 v4 M12 17 h0.01</StreamGeometry>
     <StreamGeometry x:Key="IconFilter">M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z</StreamGeometry>
+    <StreamGeometry x:Key="IconCopy">M15 12v6 M12 15h6 M10 8 H20 A2 2 0 0 1 22 10 V20 A2 2 0 0 1 20 22 H10 A2 2 0 0 1 8 20 V10 A2 2 0 0 1 10 8 Z M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2</StreamGeometry>
 </ResourceDictionary>

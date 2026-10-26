@@ -12,16 +12,17 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using PdfLibrary.Controls.Behaviors;
+using PdfLibrary.Core.Models;
 using PdfLibrary.Core.Library;
 using PdfLibrary.Views;
 using Path = Avalonia.Controls.Shapes.Path;
 
 namespace PdfLibrary.Controls.Components;
 
-/// <summary>Что окно фильтра знает о своем списке значений и что ему делать с итогом.</summary>
+/// <summary>Что окно фильтра знает о колонке служебной таблицы и что ему делать с итогом.</summary>
 public sealed class ColumnFilterSpec
 {
-    /// <summary>Ключ списка — им зовущий узнает свой итог.</summary>
+    /// <summary>Ключ колонки — им таблица узнает свою колонку в итоге.</summary>
     public required string Key { get; init; }
 
     /// <summary>Пункты сортировки: «От А до Я» / «От Я до А», у дат — «Сначала старые» / «Сначала новые».</summary>
@@ -43,16 +44,20 @@ public sealed class ColumnFilterSpec
     /// <summary>Действующий фильтр колонки (сырые значения); null — фильтра нет.</summary>
     public IReadOnlySet<string>? Filter { get; init; }
 
-    /// <summary>Сырое значение → подпись в списке.</summary>
+    /// <summary>Сырое значение → подпись в списке: те же слова, что в ячейках таблицы.</summary>
     public required Func<string, string> Display { get; init; }
 
+    /// <summary>Сырое значение — день «yyyy-MM-dd»: вместо плоского списка дерево «год → месяц → день».</summary>
+    public bool IsDate { get; init; }
+
     /// <summary>
-    /// Значения со счетчиками — по документам, прошедшим ОСТАЛЬНЫЕ фильтры ленты. Зовется один
-    /// раз при открытии: окно показывается сразу с «Загрузка…», список приходит по готовности.
+    /// Значения колонки со счетчиками — по строкам, прошедшим фильтры ОСТАЛЬНЫХ колонок (каскад,
+    /// <see cref="ColumnCascade"/>). Зовется один раз при открытии: окно показывается сразу с
+    /// «Загрузка…», список приходит по готовности.
     /// </summary>
     public required Func<Task<List<(string Value, int Count)>>> LoadValues { get; init; }
 
-    /// <summary>Значения не прочитались — куда об этом сказать, решает зовущий.</summary>
+    /// <summary>Значения не прочитались — куда об этом сказать, решает таблица (у каждой свой журнал).</summary>
     public Action<Exception>? LoadFailed { get; init; }
 
     /// <summary>«Готово» или Enter в поиске: сортировка и фильтр применяются разом.</summary>
@@ -65,16 +70,37 @@ public sealed class ColumnFilterSpec
 /// <param name="Filter">Новый фильтр; null — фильтра нет (отмечено все, что есть в колонке).</param>
 /// <param name="FilterKnown">Значения успели загрузиться. Нет — фильтр колонки не трогается:
 /// пустой набор галочек означал бы «ничего не отмечено», хотя человек просто не дождался списка.</param>
-public sealed record ColumnFilterResult(string Key, bool? Sort, HashSet<string>? Filter, bool FilterKnown);
+public sealed record ColumnFilterResult(string Key, bool? Sort, HashSet<string>? Filter, bool FilterKnown)
+{
+    /// <summary>Записать итог в состояние таблицы: сортировка одна на таблицу, фильтр — на колонку.</summary>
+    public void ApplyTo(Dictionary<string, HashSet<string>> filters, ref string? sortKey, ref bool sortAsc)
+    {
+        if (Sort is bool asc) { sortKey = Key; sortAsc = asc; }
+        else if (sortKey == Key) sortKey = null;
+
+        if (!FilterKnown) return;
+
+        if (Filter is null) filters.Remove(Key);
+        else                filters[Key] = Filter;
+    }
+}
 
 /// <summary>
-/// Окно-чеклист с поиском значений, количествами справа и «Готово»: им открывается «Тип
-/// документа» в навбаре ленты. Правила
-/// галочек — <see cref="FilterSelection"/>:
+/// Окно фильтра и сортировки колонки служебных таблиц — «История изменений», «Диагностика» и
+/// «Пользователи» панели администратора. Ведет себя в точности как окно таблицы конструктора
+/// (<c>TableView.BuildFilterPanel</c>), и правила галочек у них общие — <see cref="FilterSelection"/>:
+///  • список значений — по строкам, прошедшим фильтры других колонок (каскад); свой фильтр его не режет;
 ///  • ввод в поиске сам отмечает найденное, очистка поиска возвращает прежние галочки;
-///  • «Готово» и Enter в поиске применяют выбор; при поиске в фильтр идут отмеченные среди
-///    найденного, отмечено все — фильтр снимается;
+///  • «Готово» и Enter в поиске применяют сортировку и фильтр разом; при поиске в фильтр идут
+///    отмеченные среди найденного, отмечено все, что есть в колонке, — фильтр снимается;
 ///  • при повторном открытии отобранные значения стоят первыми.
+///
+/// <b>Почему одно окно на три таблицы.</b> Раньше у каждой была своя копия, и копии разошлись с
+/// конструктором: каскада не было ни в одной, найденное отмечали руками, Enter не применял. Три
+/// копии одного поведения расходятся снова при первой же правке одной из них.
+///
+/// Отличие от конструктора одно и сознательное: даты без выбранной сортировки идут новыми сверху —
+/// служебные таблицы и сами показывают свежие строки первыми.
 /// </summary>
 public static class ColumnFilterPanel
 {
@@ -95,9 +121,9 @@ public static class ColumnFilterPanel
 
     private static Control Build(Control host, ColumnFilterSpec spec, Action close)
     {
-        var secondary = (IBrush)Res.Required("BrushSecondaryText")!;
-        var fontBase  = (double)Res.Required("FontSizeBase")!;
-        var radius    = (CornerRadius)Res.Required("RadiusBase")!;
+        var secondary = (IBrush)Res.Required("BrushSecondaryText");
+        var fontBase  = (double)Res.Required("FontSizeBase");
+        var radius    = (CornerRadius)Res.Required("RadiusBase");
         var family    = host.TryFindResource("FontFamilyBase", out var f) ? f as FontFamily : null;
         // Ширины строк и закрепленный справа счетчик — см. FilterValueMetrics.
         var metrics   = new FilterValueMetrics();
@@ -105,7 +131,7 @@ public static class ColumnFilterPanel
         var panel = new StackPanel
         {
             // Общий стандарт всплывающих списков (Controls.axaml).
-            Width   = (double)Res.Required("PopupContentWidth")!,
+            Width   = (double)Res.Required("PopupContentWidth"),
             Margin  = new Thickness(12),
             Spacing = 2,
             Cursor  = new Cursor(StandardCursorType.Arrow),
@@ -160,7 +186,7 @@ public static class ColumnFilterPanel
             Watermark    = "Поиск значений...",
             Height       = 30,
             CornerRadius = radius,
-            Background   = Res.Brush("BrushBg") ?? Brushes.White,
+            Background = Res.Brush("BrushBg") ?? Brushes.White,
             Margin       = new Thickness(0, 0, 0, 4),
             VerticalContentAlignment = VerticalAlignment.Center,
         };
@@ -233,19 +259,37 @@ public static class ColumnFilterPanel
         };
         var valuesHost = new Border
         {
-            Background   = Res.Brush("BrushBg") ?? Brushes.White,
-            BorderBrush  = (IBrush)Res.Required("BrushSeparator")!,
+            Background = Res.Brush("BrushBg") ?? Brushes.White,
+            BorderBrush  = (IBrush)Res.Required("BrushSeparator"),
             CornerRadius = radius,
             // Padding НУЛЕВОЙ: полосы прокрутки прилегают к краям карточки, воздух вокруг
             // содержимого задает ScrollBarLink.HeaderedList. ClipToBounds срезает углы полос.
             Padding      = new Thickness(0),
             ClipToBounds = true,
             // Фикс высота (стандарт) — список не «прыгает» при замене «Загрузка…».
-            Height       = (double)Res.Required("PopupListHeight")!,
+            Height       = (double)Res.Required("PopupListHeight"),
             Child        = loadingText,
         };
         valuesHost.Bind(Border.BorderThicknessProperty, valuesHost.GetResourceObservable("BorderLine"));
         panel.Children.Add(valuesHost);
+
+        // Колонка-дата — дерево «Год → Месяц → День» (DateFilterTreeBox), тот же чеклист, что
+        // у свойств-дат конструктора. Появляется вместе с данными.
+        DateFilterTreeBox? tree = null;
+        var treeNewestFirst = false;
+
+        void MountTree(bool newestFirst)
+        {
+            treeNewestFirst = newestFirst;
+            tree = DateFilterTreeBox.ForIsoDates(counts, checkedSet, fontBase, secondary, newestFirst);
+            tree.SelectionChanged += (_, _) => SyncSelectAll();
+            // «(Выделить все)» — общий чекбокс обоих режимов, а шапку HeaderedList он получает во
+            // владение: снимаем его с прежнего родителя, иначе «already has a visual parent».
+            (selectAll.Parent as Panel)?.Children.Remove(selectAll);
+            valuesHost.Child = EmptyListHint.Wrap(tree.List, search, secondary, fontBase,
+                                                  content: ScrollBarLink.HeaderedList(selectAll, tree.List, gap: 2));
+            tree.Search(search.Text);
+        }
 
         List<(string Raw, int Count)> Matched()
         {
@@ -257,10 +301,21 @@ public static class ColumnFilterPanel
 
         // Показанные сейчас сырые значения — общий язык обоих режимов: по ним считаются
         // «(Выделить все)», автоотметка найденного и режим «Заменить».
-        IEnumerable<string> MatchedRaws() => shown.Select(v => v.Raw);
+        IEnumerable<string> MatchedRaws() =>
+            tree is not null ? tree.VisibleRaws : shown.Select(v => v.Raw);
 
         void RebuildList()
         {
+            if (spec.IsDate)
+            {
+                if (tree is null) return;   // значения еще грузятся
+                // Сменили сортировку — дерево пересобирается в новом порядке.
+                var newestFirst = pendingSort != true;
+                if (treeNewestFirst != newestFirst) MountTree(newestFirst);
+                else tree.Search(search.Text);
+                return;
+            }
+
             shown.Clear();
             shown.AddRange(Matched().Select(c => Vm(c.Raw, c.Count)));
             // Ширина строки фиксируется по текущему набору — иначе экстент горизонтальной
@@ -273,7 +328,9 @@ public static class ColumnFilterPanel
         {
             syncingSelectAll    = true;
             selectAll.Content   = selection.Searching ? "(Выделить все найденное)" : "(Выделить все)";
-            selectAll.IsChecked = shown.All(v => checkedSet.Contains(v.Raw));
+            selectAll.IsChecked = tree is not null
+                ? tree.AllVisibleChecked
+                : shown.All(v => checkedSet.Contains(v.Raw));
             syncingSelectAll    = false;
         }
 
@@ -282,7 +339,8 @@ public static class ColumnFilterPanel
         // переиспользуются, и без события привязка не узнает о правке общего набора.
         void RefreshChecks()
         {
-            foreach (var vm in shown) vm.Refresh();
+            if (tree is not null) tree.RefreshChecked();
+            else foreach (var vm in shown) vm.Refresh();
         }
 
         void OnSearchChanged()
@@ -298,6 +356,7 @@ public static class ColumnFilterPanel
         {
             if (syncingSelectAll) return;
             var on = selectAll.IsChecked == true;
+            if (tree is not null) { tree.SetAllVisible(on); return; }
 
             foreach (var (raw, _) in Matched())
             {
@@ -358,8 +417,9 @@ public static class ColumnFilterPanel
 
             ReloadCounts();
 
+            if (spec.IsDate) MountTree(newestFirst: pendingSort != true);
             // «Загрузка…» → список; пустой список показывает «Список пуст» / «Ничего не найдено».
-            valuesHost.Child = EmptyListHint.Wrap(valuesList, search, secondary, fontBase, content: valuesBox);
+            else valuesHost.Child = EmptyListHint.Wrap(valuesList, search, secondary, fontBase, content: valuesBox);
 
             // Галочки заполнены заново — снимок «до поиска» (если печатали до загрузки) устарел.
             selection.Reset();
@@ -370,14 +430,19 @@ public static class ColumnFilterPanel
         return panel;
     }
 
-    // Порядок значений: выбранная сортировка колонки, без нее — по подписи. «(Пусто)» всегда в конце.
+    // Порядок значений: выбранная сортировка колонки; без нее даты новыми сверху (сырое ISO
+    // сортируется хронологически), остальное — по подписи. «(Пусто)» всегда в конце.
     private static List<(string Raw, int Count)> Order(List<(string Value, int Count)> source,
                                                        ColumnFilterSpec spec, bool? asc)
     {
         var filled = source.Where(c => c.Value.Length > 0).Select(c => (Raw: c.Value, c.Count));
         var empty  = source.Where(c => c.Value.Length == 0).Select(c => (Raw: c.Value, c.Count));
 
-        filled = asc == false
+        filled = spec.IsDate
+            ? asc == true
+                ? filled.OrderBy(c => c.Raw, StringComparer.Ordinal)
+                : filled.OrderByDescending(c => c.Raw, StringComparer.Ordinal)
+            : asc == false
                 ? filled.OrderByDescending(c => spec.Display(c.Raw), StringComparer.CurrentCultureIgnoreCase)
                 : filled.OrderBy(c => spec.Display(c.Raw), StringComparer.CurrentCultureIgnoreCase);
 
@@ -421,7 +486,7 @@ public static class ColumnFilterPanel
     // Пункт сортировки: иконка, подпись и галочка у выбранного.
     private static Button FlatItem(Control host, string text, Action onClick, Geometry icon, bool active = false)
     {
-        var fg = (IBrush)Res.Required(active ? "BrushAccent" : "BrushPrimaryText")!;
+        var fg = (IBrush)Res.Required(active ? "BrushAccent" : "BrushPrimaryText");
 
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
 
@@ -453,9 +518,9 @@ public static class ColumnFilterPanel
             Background                 = Brushes.Transparent,
             BorderThickness            = new Thickness(0),
             Padding                    = new Thickness(8, 6),
-            FontSize                   = (double)Res.Required("FontSizeBase")!,
+            FontSize                   = (double)Res.Required("FontSizeBase"),
             Foreground                 = fg,
-            CornerRadius               = (CornerRadius)Res.Required("RadiusBase")!,
+            CornerRadius               = (CornerRadius)Res.Required("RadiusBase"),
             HorizontalAlignment        = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
         };
@@ -468,7 +533,7 @@ public static class ColumnFilterPanel
     {
         var sep = new Border
         {
-            Background = (IBrush)Res.Required("BrushSeparator")!,
+            Background = (IBrush)Res.Required("BrushSeparator"),
             Margin     = new Thickness(0, 6),
         };
         sep.Bind(Layoutable.HeightProperty, sep.GetResourceObservable("SeparatorThickness"));

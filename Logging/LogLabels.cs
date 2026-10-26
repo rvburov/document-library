@@ -15,7 +15,7 @@ public static class LogLabels
     {
         ["Verbose"]     = "Подробно",
         ["Debug"]       = "Отладка",
-        ["Information"] = "Сведения",
+        ["Information"] = "Информация",
         ["Warning"]     = "Предупреждение",
         ["Error"]       = "Ошибка",
         ["Fatal"]       = "Критическая",

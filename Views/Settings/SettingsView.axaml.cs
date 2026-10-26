@@ -93,11 +93,11 @@ public partial class SettingsView : UserControl
         Sources.IsVisible = section == Section.Sources;
         Cards.IsVisible = section == Section.Cards;
         Look.IsVisible = section == Section.Look;
-        Diagnostics.IsVisible = section == Section.Diagnostics;
+        LogsPanel.IsVisible = section == Section.Diagnostics;
         About.IsVisible = section == Section.About;
         DiagActions.IsVisible = section == Section.Diagnostics;
         Scroll.IsVisible = section != Section.Diagnostics;
-        if (section != Section.Diagnostics) { LogFilterPopup?.Hide(); CloseLogDetail(); }
+        if (section != Section.Diagnostics) { LogFilterPopup?.Hide(); CloseLogsDetail(); }
         Scroll.Offset = default;
 
         switch (section)
@@ -106,7 +106,7 @@ public partial class SettingsView : UserControl
             case Section.Sources: FillMaxFile(); RefreshFolders(); _ = RefreshCacheAsync(); break;
             case Section.Cards: BuildCardControls(); break;
             case Section.Look: BuildLookControls(); break;
-            case Section.Diagnostics: BuildLogsTable(); _ = LoadLogAsync(reset: true); break;
+            case Section.Diagnostics: RebuildLogsPanel(); break;
             case Section.About: FillAbout(); break;
         }
     }
@@ -395,7 +395,7 @@ public partial class SettingsView : UserControl
                 "Очистить")) is not true) return;
         await new LogReader(AppSettings.LogsDbPath).ClearAsync();
         Serilog.Log.Information("Журнал очищен");
-        await LoadLogAsync(reset: true);
+        ReloadLogsRows();
     }
 
     // ── О программе ───────────────────────────────────────────────────────────

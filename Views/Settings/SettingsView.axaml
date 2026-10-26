@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:s="using:PdfLibrary.Views.Settings"
+             xmlns:grid="using:PdfLibrary.Controls.DrawnGrid"
              x:Class="PdfLibrary.Views.Settings.SettingsView"
              x:DataType="s:SettingsViewModel"
              Background="{DynamicResource BrushBg}">
@@ -92,23 +93,68 @@
             <Setter Property="TextBlock.TextDecorations" Value="Underline" />
         </Style>
 
-        <Style Selector="DataGrid.logtable DataGridColumnHeader">
-            <Setter Property="Background" Value="{DynamicResource BrushBg}" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="FontWeight" Value="Normal" />
-        </Style>
-        <Style Selector="DataGrid.logtable DataGridCell">
-            <Setter Property="Padding" Value="8,0" />
-        </Style>
-        <Style Selector="DataGrid.logtable DataGridCell TextBlock">
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-        </Style>
+    <Style Selector="Border.detailRow">
+        <Setter Property="Background"      Value="{DynamicResource BrushBg}" />
+        <Setter Property="BorderBrush"     Value="{DynamicResource BrushSeparator}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource BorderLine}" />
+        <Setter Property="CornerRadius"    Value="{StaticResource RadiusMedium}" />
+        <Setter Property="Padding"         Value="10,3" />
+        <Setter Property="MinHeight"       Value="40" />
+        <Setter Property="Cursor"          Value="Hand" />
+    </Style>
+    <Style Selector="Border.detailRow:pointerover">
+        <Setter Property="Background" Value="{DynamicResource BrushInactiveBg}" />
+    </Style>
+    <Style Selector="Border.detailRow.selected, Border.detailRow.selected:pointerover">
+        <Setter Property="Background"  Value="{DynamicResource BrushAccentLight}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushAccent}" />
+    </Style>
+    <Style Selector="Border.detailRow TextBlock.detailName">
+        <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+    </Style>
+    <Style Selector="Border.detailRow Path.detailIcon">
+        <Setter Property="Stroke" Value="{DynamicResource BrushSecondaryText}" />
+    </Style>
+    <Style Selector="Border.detailRow.selected TextBlock.detailName">
+        <Setter Property="Foreground" Value="{DynamicResource BrushAccent}" />
+    </Style>
+    <Style Selector="Border.detailRow.selected Path.detailIcon">
+        <Setter Property="Stroke" Value="{DynamicResource BrushAccent}" />
+    </Style>
+
+    <!-- Ручка-разделитель (три вертикальные точки ⋮) между названием и значением
+         карточки — тянем влево/вправо, меняем общую ширину колонки названий. -->
+    <Style Selector="Border.detailGrip">
+        <Setter Property="Background"        Value="Transparent" />
+        <Setter Property="Width"             Value="18" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Cursor"            Value="SizeWestEast" />
+    </Style>
+
+    <Style Selector="TextBox.notesEditor">
+        <Setter Property="Background"               Value="Transparent" />
+        <Setter Property="BorderThickness"          Value="0" />
+        <Setter Property="Padding"                  Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <!-- Многострочный редактор — вертикальная прокрутка нужна (перебиваем дефолт TextBox). -->
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+    </Style>
+    <Style Selector="TextBox.notesEditor /template/ Border#PART_BorderElement">
+        <Setter Property="Background"      Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox.notesEditor:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background"      Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="TextBox.notesEditor:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background"      Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
     </UserControl.Styles>
 
-    <Grid x:Name="SettingsLayout" ColumnDefinitions="*,Auto,0">
+    <Grid x:Name="SettingsLayout" ColumnDefinitions="*,Auto,Auto">
     <DockPanel Grid.Column="0">
 
         <!-- Шапка раздела: высота навбара, отступ 16 — как у навбара ленты. -->
@@ -582,74 +628,175 @@
             </Panel>
         </ScrollViewer>
         <!-- Журнал занимает всю доступную область; фильтры и сортировка — в заголовках. -->
-        <Grid x:Name="Diagnostics" IsVisible="False" RowDefinitions="*,Auto">
-            <Panel>
-                <DataGrid x:Name="LogsGrid" Classes="logtable"
-                          AutoGenerateColumns="False" IsReadOnly="True"
-                          CanUserSortColumns="False" CanUserReorderColumns="False" CanUserResizeColumns="True"
-                          SelectionMode="Single" HeadersVisibility="Column"
-                          GridLinesVisibility="All" BorderThickness="0"
-                          RowHeight="{StaticResource RowHeightStandard}" ColumnHeaderHeight="{StaticResource RowHeightStandard}"
-                          Background="{DynamicResource BrushBg}" RowBackground="{DynamicResource BrushBg}"
-                          Foreground="{DynamicResource BrushPrimaryText}"
-                          FontSize="{DynamicResource FontSizeBase}" FontFamily="{StaticResource FontFamilyBase}"
-                          HorizontalGridLinesBrush="{DynamicResource BrushSeparator}"
-                          VerticalGridLinesBrush="{DynamicResource BrushSeparator}" />
-                <TextBlock x:Name="NoLogs" IsVisible="False" Text="Записей пока нет."
-                           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="16,52,16,0"
-                           Foreground="{DynamicResource BrushSecondaryText}" />
+            <Panel x:Name="LogsPanel" IsVisible="False">
+                <grid:ServiceGrid x:Name="LogsGrid" />
+                <TextBlock x:Name="LogsEmptyText"
+                           Text="Записей пока нет."
+                           IsVisible="False"
+                           FontSize="{DynamicResource FontSizeSmall}"
+                           Foreground="{DynamicResource BrushSecondaryText}"
+                           HorizontalAlignment="Center"
+                           Margin="0,48,0,0" />
             </Panel>
-            <Border Grid.Row="1" Padding="8,5" Background="{DynamicResource BrushSecondaryBg}">
-                <Grid ColumnDefinitions="Auto,*">
-                    <TextBlock x:Name="LogCount" Classes="small muted" Margin="0,0,16,0" />
-                    <TextBlock Grid.Column="1" x:Name="LogNote" Classes="small muted" TextTrimming="CharacterEllipsis" />
-                </Grid>
-            </Border>
-        </Grid>
+
         </Grid>
     </DockPanel>
-    <GridSplitter Grid.Column="1" x:Name="LogDetailSplitter" IsVisible="False"
-                  Width="5" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
-                  Background="{DynamicResource BrushSeparator}" />
-    <DockPanel Grid.Column="2" x:Name="LogDetailPanel" IsVisible="False" Background="{DynamicResource BrushBg}">
-        <Grid DockPanel.Dock="Top" Height="56" Margin="16,0" ColumnDefinitions="*,Auto">
-            <TextBlock Text="Детали" VerticalAlignment="Center"
-                       FontSize="{DynamicResource FontSizeLarge}" FontWeight="{StaticResource FontWeightBold}" />
-            <Button Grid.Column="1" Classes="navbtn" Width="30" Height="30" VerticalAlignment="Center"
-                    ToolTip.Tip="Закрыть детали записи" Click="OnCloseLogDetail">
-                <Viewbox Width="16" Height="16">
-                    <Canvas Width="24" Height="24">
-                        <Path Data="{StaticResource IconClose}" Stroke="{Binding $parent[Button].Foreground}"
-                              StrokeThickness="{StaticResource IconStrokeMedium}" StrokeLineCap="Round" StrokeJoin="Round" />
-                    </Canvas>
-                </Viewbox>
-            </Button>
-        </Grid>
-        <Grid RowDefinitions="Auto,Auto,*,Auto,*" Margin="16,0,16,16">
-            <Border Classes="separator h" />
-            <TextBlock Grid.Row="1" Classes="h2" Text="СВОЙСТВА" />
-            <ListBox Grid.Row="2" x:Name="LogDetailFields" Background="Transparent" Padding="0"
-                     SelectionChanged="OnLogDetailFieldChanged">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="s:LogDetailField">
-                        <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}"
-                                Padding="8,10">
-                            <Grid ColumnDefinitions="110,*">
-                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource BrushSecondaryText}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,12,0,8">
-                <TextBlock x:Name="LogDetailTitle" VerticalAlignment="Center" Foreground="{DynamicResource BrushSecondaryText}" />
-                <Button Grid.Column="1" Classes="link" Content="Скопировать" Click="OnCopyLogDetail" />
+    <Border Grid.Column="1" x:Name="LogsDetailDivider" Classes="separator v" IsVisible="False" />
+    <!-- ── Детали строки журнала (во всю высоту) ───────────────────────────
+         Навбар «Детали» встает вровень с навбаром настроек. Карточки полей сверху,
+         полный текст снизу — как «Страница записи» (RecordPageView). Нижнюю границу
+         навбара рисует общая линия окна на y=56 (MainWindow), своей линии под шапкой
+         нет (иначе удвоение). Ширина — в code-behind (_logsDetailWidth), меняется
+         ручкой LogsDetailResizeGrip ниже. -->
+    <Border Grid.Column="2" x:Name="LogsDetailPanel"
+            IsVisible="False"
+            Background="{DynamicResource BrushBg}">
+        <Grid x:Name="LogsDetailGrid" RowDefinitions="Auto,*,Auto,*">
+
+            <!-- Шапка-навбар панели: заголовок слева + крестик справа —
+                 как навбар «Страницы записи» (NavbarPage): высота 56,
+                 крупный жирный заголовок, кнопка navbtn. -->
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto"
+                  Height="56" Margin="16,0">
+                <TextBlock Grid.Column="0" Text="Детали"
+                           VerticalAlignment="Center"
+                           FontSize="{DynamicResource FontSizeLarge}"
+                           FontWeight="{StaticResource FontWeightBold}"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,12,0" />
+                <Button Grid.Column="1" x:Name="LogsDetailCloseBtn"
+                        Classes="navbtn" Width="30" Height="30"
+                        VerticalAlignment="Center"
+                        CornerRadius="{StaticResource RadiusMedium}"
+                        ToolTip.Tip="Закрыть">
+                    <Viewbox Width="{StaticResource IconSizeMedium}"
+                             Height="{StaticResource IconSizeMedium}">
+                        <Canvas Width="24" Height="24">
+                            <Path Data="{StaticResource IconClose}"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="{StaticResource IconStrokeMedium}"
+                                  StrokeLineCap="Round" StrokeJoin="Round" />
+                        </Canvas>
+                    </Viewbox>
+                </Button>
             </Grid>
-            <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Disabled">
-                <SelectableTextBlock x:Name="LogDetailText" TextWrapping="Wrap" FontSize="{DynamicResource FontSizeBase}" />
+
+            <!-- Карточки полей строятся в code-behind (BuildLogsDetailCards).
+                 Строка карточек ресайзится ручкой-пилюлей ниже.
+                 Фон блока серый — как у блока свойств «Страницы записи»: белые карточки
+                 читаются на нем как отдельные плашки. Серым залита вся строка (она
+                 звездная), поэтому блок отбит от белой шапки сверху и текста снизу. -->
+            <ScrollViewer Grid.Row="1"
+                          Background="{DynamicResource BrushSecondaryBg}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="LogsDetailCardsHost"
+                            Margin="16,16,16,16" Spacing="6" />
             </ScrollViewer>
+
+            <!-- Линия-разделитель между карточками и текстом (в своей строке). -->
+            <Border Grid.Row="2" Classes="separator h"
+                    VerticalAlignment="Center" />
+
+            <!-- Ручка-пилюля: плавает поверх линии (лежит в строке карточек у
+                 нижнего края), тянет высоту блока карточек — как PropsResizeGrip
+                 «Страницы записи». -->
+            <Border Grid.Row="1"
+                    x:Name="LogsPropsResizeGrip"
+                    Width="34" Height="11"
+                    Margin="0,0,0,-5"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    CornerRadius="4"
+                    Background="{DynamicResource BrushBg}"
+                    BorderBrush="{DynamicResource BrushSeparator}"
+                    BorderThickness="{DynamicResource BorderLine}"
+                    Cursor="SizeNorthSouth">
+                <StackPanel Orientation="Horizontal" Spacing="3"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                    <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                    <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Полный текст выбранного поля. Отступы/крошка/редактор — 1-в-1 как нижний
+                 блок «Страницы записи» (RecordPageView): 16px по кругу, крошка отбита
+                 на 16px, безбордерный переносящий редактор. Отличие одно — иконка
+                 копирования справа от крошки. -->
+            <Grid Grid.Row="3" RowDefinitions="Auto,*"
+                  Margin="16,16,16,16">
+                <!-- Крошка «Поле › Имя» + копирование -->
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto"
+                      Margin="0,0,0,16">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                Spacing="6" VerticalAlignment="Center">
+                        <TextBlock Text="Поле"
+                                   Foreground="{DynamicResource BrushSecondaryText}"
+                                   VerticalAlignment="Center" />
+                        <Viewbox Width="14" Height="14" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconChevronRight}"
+                                      Stroke="{DynamicResource BrushSecondaryText}"
+                                      StrokeThickness="1.6"
+                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                            </Canvas>
+                        </Viewbox>
+                        <TextBlock x:Name="LogsDetailFieldName"
+                                   Foreground="{DynamicResource BrushSecondaryText}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button Grid.Column="1" x:Name="LogsDetailCopyBtn"
+                            Classes="icon" Width="28" Height="28"
+                            ToolTip.Tip="Скопировать">
+                        <Viewbox Width="{StaticResource IconSizeSmall}"
+                                 Height="{StaticResource IconSizeSmall}">
+                            <Canvas Width="24" Height="24">
+                                <Path Data="{StaticResource IconCopy}"
+                                      Stroke="{DynamicResource BrushSecondaryText}"
+                                      StrokeThickness="{StaticResource IconStrokeSmall}"
+                                      StrokeLineCap="Round" StrokeJoin="Round" />
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                </Grid>
+
+                <!-- Read-only, но выделяемый/копируемый. Класс notesEditor — безбордерный
+                     во ВСЕХ состояниях (в т.ч. в фокусе), как редактор записи. Перенос по
+                     словам, без горизонтального скролла — длинные строки стектрейса
+                     переносятся, как текст в записи (полный текст — по кнопке копирования). -->
+                <TextBox Grid.Row="1" x:Name="LogsDetailFullText"
+                         Classes="notesEditor"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap" />
+            </Grid>
         </Grid>
-    </DockPanel>
+    </Border>
+
+    <!-- Ручка перетягивания ширины панели «Детали» — вертикальная пилюля у ее левого
+         края, плавает поверх разделителя (Margin -5), курсор ↔. Как ручка панели записи
+         (RecordResizeGrip в MainWindow). Видна вместе с панелью; drag меняет ширину. -->
+    <Border Grid.Column="2" x:Name="LogsDetailResizeGrip"
+            Width="11" Height="34"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Center"
+            Margin="-5,0,0,0"
+            CornerRadius="4"
+            Background="{DynamicResource BrushBg}"
+            BorderBrush="{DynamicResource BrushSeparator}"
+            BorderThickness="{DynamicResource BorderLine}"
+            Cursor="SizeWestEast"
+            IsVisible="False">
+        <StackPanel Orientation="Vertical" Spacing="3"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+            <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+            <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+            <Ellipse Width="2.5" Height="2.5" Fill="{DynamicResource BrushSecondaryText}" />
+        </StackPanel>
+    </Border>
+
     </Grid>
 </UserControl>

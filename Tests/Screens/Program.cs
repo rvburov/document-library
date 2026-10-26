@@ -28,6 +28,8 @@ using PdfLibrary.Utils;
 using PdfLibrary.Views;
 using Avalonia.Controls.Primitives;
 using PdfLibrary.Controls.Components;
+using PdfLibrary.Controls.DrawnGrid;
+using LogRow = PdfLibrary.Logging.LogReader.LogRow;
 using PdfLibrary.Views.Library;
 using PdfLibrary.Views.Settings;
 using PdfLibrary.Views.Dialogs;
@@ -276,56 +278,93 @@ try
         Shot(window, $"{09 + i:D2}-settings-{i + 1}");
         if (keys[i] == "diagnostics")
         {
-            var logs = settings.FindControl<DataGrid>("LogsGrid")!;
-            List<LogRowView> LogRows() => logs.ItemsSource.Cast<LogRowView>().ToList();
+            var logs = settings.FindControl<ServiceGrid>("LogsGrid")!;
+            List<LogRow> LogRows() => logs.Rows.Select(r => (LogRow)r.Source!).ToList();
             Until(() => LogRows().Count >= 200, "первая страница таблицы диагностики", TimeSpan.FromSeconds(15));
             Check(LogRows().Count == 200, "первая страница журнала ограничена 200 записями");
-            Check(logs.Columns.Count == 4 && logs.IsReadOnly && logs.GridLinesVisibility == DataGridGridLinesVisibility.All,
+            Check(logs.Columns.Count == 4 && logs.Columns.All(c => c.FieldType == "text"),
                   "диагностика показывает четыре колонки с границами ячеек");
             Check(logs.Bounds.Width > settings.Bounds.Width - 20 && logs.Bounds.Height > 300,
                   "таблица диагностики занимает доступную ширину и высоту");
-            Check(Texts(settings).Any(t => t.StartsWith("Журнал хранится в logs.db")), "диагностика читает журнал");
-            logs.ScrollIntoView(LogRows()[190], logs.Columns[0]);
+            logs.ScrollIntoView(199);
             Until(() => LogRows().Count > 200, "подгрузка следующей страницы журнала", TimeSpan.FromSeconds(10));
-            Check(LogRows().Select(r => r.Row.Id).Distinct().Count() == LogRows().Count, "при подгрузке нет повторяющихся записей");
+            Check(LogRows().Select(r => r.Id).Distinct().Count() == LogRows().Count, "при подгрузке нет повторяющихся записей");
             var errorRow = LogRows().First(r => r.Message == "Таблица диагностики: ошибка для проверки деталей");
-            logs.SelectedItem = errorRow;
-            logs.ScrollIntoView(errorRow, logs.Columns[0]);
+            logs.ScrollIntoView(LogRows().IndexOf(errorRow));
+            Pump(TimeSpan.FromMilliseconds(100));
+            MouseTap(window, logs.Surface, logs.Surface.CellRect(LogRows().IndexOf(errorRow), 0).Center);
             Pump(TimeSpan.FromMilliseconds(300));
-            Check(settings.FindControl<DockPanel>("LogDetailPanel")!.IsVisible &&
-                  settings.FindControl<SelectableTextBlock>("LogDetailText")!.Text == errorRow.Message,
+            Check(settings.FindControl<Border>("LogsDetailPanel")!.IsVisible &&
+                  settings.FindControl<TextBox>("LogsDetailFullText")!.Text == errorRow.Message,
                   "выбор записи открывает справа полный текст сообщения");
-            var fields = settings.FindControl<ListBox>("LogDetailFields")!;
-            fields.SelectedItem = fields.ItemsSource!.Cast<LogDetailField>().Single(f => f.Key == "exception");
-            Pump(TimeSpan.FromMilliseconds(200));
-            Check(settings.FindControl<SelectableTextBlock>("LogDetailText")!.Text == errorRow.Detail,
-                  "панель деталей показывает полное исключение");
+            var cards = settings.FindControl<StackPanel>("LogsDetailCardsHost")!;
+            Check(cards.Children.Count == 4, "в деталях четыре карточки полей");
+            var errorCard = cards.Children[3];
+            MouseTap(window, errorCard, new Point(errorCard.Bounds.Width / 2, errorCard.Bounds.Height / 2));
+            Check(settings.FindControl<TextBox>("LogsDetailFullText")!.Text == errorRow.Exception,
+                  "карточка ошибки раскрывает полное исключение");
+            var detail = settings.FindControl<Border>("LogsDetailPanel")!;
+            var detailGrip = settings.FindControl<Border>("LogsDetailResizeGrip")!;
+            var oldWidth = detail.Bounds.Width;
+            MouseDrag(window, detailGrip, new Vector(-45, 0));
+            Check(detail.Bounds.Width > oldWidth + 35, "ручка меняет ширину деталей");
+            var detailGrid = settings.FindControl<Grid>("LogsDetailGrid")!;
+            var oldHeight = detailGrid.RowDefinitions[1].ActualHeight;
+            MouseDrag(window, settings.FindControl<Border>("LogsPropsResizeGrip")!, new Vector(0, -45));
+            Check(detailGrid.RowDefinitions[1].ActualHeight < oldHeight - 35,
+                  "ручка меняет высоту карточек и оставляет место полному тексту");
+            var nameGrip = cards.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("detailGrip"));
+            var nameCol = ((Grid)((Border)cards.Children[0]).Child!).ColumnDefinitions[0];
+            var oldNameWidth = nameCol.ActualWidth;
+            MouseDrag(window, nameGrip, new Vector(18, 0));
+            Check(nameCol.ActualWidth > oldNameWidth + 12, "ручка карточки меняет ширину названий всех полей");
             Shot(window, "13a-diagnostics-details");
-            Click(settings, null, "Закрыть детали записи");
-            Click(settings, null, "Фильтр и сортировка: Уровень");
+            Click(settings, null, "Закрыть");
+            Check(!detail.IsVisible, "крестик закрывает детали");
+            MouseTap(window, logs.Surface, logs.Surface.CellRect(LogRows().IndexOf(errorRow), 0).Center);
+            Check(detail.IsVisible && settings.FindControl<TextBox>("LogsDetailFullText")!.Text == errorRow.Exception,
+                  "повторный клик открывает детали с прежним полем и размерами");
+            Click(settings, null, "Закрыть");
+            OpenLogFilter(window, settings, "level");
             Pump(TimeSpan.FromMilliseconds(300));
             var filter = (Visual)settings.LogFilterPopup!.Content!;
             var search = filter.GetVisualDescendants().OfType<TextBox>().Single();
             search.Text = "Ошибка";
             Pump(TimeSpan.FromMilliseconds(200));
             Click(filter, "Готово");
-            Until(() => LogRows().Count > 0 && LogRows().All(r => r.Row.Level == "Error"), "фильтр уровня журнала", TimeSpan.FromSeconds(10));
-            Check(LogRows().Any(r => r.Row.Id == errorRow.Row.Id), "фильтр уровня сохраняет нужную запись");
-            Click(settings, null, "Фильтр и сортировка: Уровень");
+            Until(() => LogRows().Count > 0 && LogRows().All(r => r.Level == "Error"), "фильтр уровня журнала", TimeSpan.FromSeconds(10));
+            Check(LogRows().Any(r => r.Id == errorRow.Id), "фильтр уровня сохраняет нужную запись");
+            OpenLogFilter(window, settings, "level");
             Pump(TimeSpan.FromMilliseconds(300));
             filter = (Visual)settings.LogFilterPopup!.Content!;
             filter.GetVisualDescendants().OfType<CheckBox>().Single(c => Equals(c.Content, "(Выделить все)")).IsChecked = true;
             Click(filter, "Готово");
             Until(() => LogRows().Count >= 200, "снятие фильтра журнала", TimeSpan.FromSeconds(10));
-            Click(settings, null, "Фильтр и сортировка: Сообщение");
+            OpenLogFilter(window, settings, "message");
             Pump(TimeSpan.FromMilliseconds(300));
             filter = (Visual)settings.LogFilterPopup!.Content!;
             Click(filter, "От А до Я");
             Click(filter, "Готово");
-            Until(() => LogRows().Count > 1 && LogRows().First().Row.Id != errorRow.Row.Id, "сортировка журнала", TimeSpan.FromSeconds(10));
+            Until(() => LogRows().Count > 1 && LogRows().First().Id != errorRow.Id, "сортировка журнала", TimeSpan.FromSeconds(10));
             Check(LogRows().Select(r => r.Message).SequenceEqual(LogRows().Select(r => r.Message).Order(StringComparer.Ordinal)),
                   "сортировка заголовка применяется ко всей странице журнала");
+            OpenLogFilter(window, settings, "date");
+            Pump(TimeSpan.FromMilliseconds(350));
+            var dateFilter = (Visual)settings.LogFilterPopup!.Content!;
+            Check(dateFilter.GetVisualDescendants().OfType<ListBox>().Any(l => l.ItemCount > 0),
+                  "фильтр времени показывает дерево дат");
+            settings.LogFilterPopup.Hide();
+            CheckLogPixels(window, logs);
             Shot(window, "13b-diagnostics-table");
+            foreach (var scale in new[] { 0.9, 1.0, 1.1, 1.25 })
+            {
+                Scaling.Set(scale);
+                Pump(TimeSpan.FromMilliseconds(250));
+                CheckLogPixels(window, logs);
+                Shot(window, "13c-diagnostics-scale-" + (int)Math.Round(scale * 100));
+            }
+            Scaling.Set(1);
+            Pump(TimeSpan.FromMilliseconds(200));
         }
         if (keys[i] == "look")
         {
@@ -387,12 +426,13 @@ try
     Pump(TimeSpan.FromMilliseconds(500));
     Shot(window, "15-settings-look-dark");
     sections.Select("diagnostics");
-    Until(() => settings.FindControl<DataGrid>("LogsGrid")!.ItemsSource.Cast<LogRowView>().Any(),
+    Until(() => settings.FindControl<ServiceGrid>("LogsGrid")!.RowCount > 0,
           "таблица диагностики в темной теме", TimeSpan.FromSeconds(10));
-    Click(settings, null, "Фильтр и сортировка: Уровень");
+    OpenLogFilter(window, settings, "level");
     Pump(TimeSpan.FromMilliseconds(300));
     Check(settings.LogFilterPopup?.IsOpen == true, "фильтр таблицы открывается и в темной теме");
     settings.LogFilterPopup?.Hide();
+    CheckLogPixels(window, settings.FindControl<ServiceGrid>("LogsGrid")!);
     Shot(window, "15a-diagnostics-dark");
     Click(window, null, "Библиотека");
     Pump(TimeSpan.FromMilliseconds(800));
@@ -466,6 +506,83 @@ void Until(Func<bool> condition, string what, TimeSpan limit)
         Thread.Sleep(20);
     }
     Check(false, "не дождались: " + what);
+}
+
+// Проверяем сами пиксели кадра: фон темы и одиночные линии в шапке и теле.
+void CheckLogPixels(Window window, ServiceGrid grid)
+{
+    window.MouseMove(new Point(100, 10));
+    Pump(TimeSpan.FromMilliseconds(100));
+    using var frame = window.CaptureRenderedFrame();
+    if (frame is null) { Check(false, "кадр диагностики не снят"); return; }
+    using var fb = frame.Lock();
+    var data = new byte[fb.RowBytes * frame.PixelSize.Height];
+    System.Runtime.InteropServices.Marshal.Copy(fb.Address, data, 0, data.Length);
+    var rgba = fb.Format == Avalonia.Platform.PixelFormat.Rgba8888;
+    var scale = PdfLibrary.Controls.Behaviors.LineMetrics.EffectiveScale(grid.Surface);
+    var bg = ((Avalonia.Media.ISolidColorBrush)Res.Required("BrushBg")).Color;
+    var line = ((Avalonia.Media.ISolidColorBrush)Res.Required("BrushSeparator")).Color;
+    var origin = grid.Surface.TranslatePoint(default, window)!.Value * window.RenderScaling;
+    Avalonia.Media.Color Pixel(int x, int y)
+    {
+        var i = y * fb.RowBytes + x * 4;
+        return Avalonia.Media.Color.FromArgb(data[i + 3], data[i + (rgba ? 0 : 2)], data[i + 1], data[i + (rgba ? 2 : 0)]);
+    }
+    var yHeader = (int)Math.Round(origin.Y + 3 * scale);
+    var yBody = (int)Math.Round(origin.Y + (grid.Surface.HeaderHeight + grid.Surface.RowPitch * 3 + 2) * scale);
+    var xBlank = (int)Math.Round(origin.X + (grid.Surface.Columns.Left(3) + 8) * scale);
+    Check(Pixel(xBlank, yBody) == bg, $"фон сетки совпадает с темой при {Scaling.Current:P0}");
+    var headBg = ((Avalonia.Media.ISolidColorBrush)Res.Required("BrushInactiveBg")).Color;
+    // На дробном зуме одна линия может покрывать два соседних пикселя со сглаживанием.
+    // Суммарное покрытие должно оставаться единичным: двойная линия даст около двух.
+    (double Coverage, double Center) Stroke(IEnumerable<(int Position, Avalonia.Media.Color Color)> pixels,
+                                           Avalonia.Media.Color background)
+    {
+        var weights = pixels.Select(p => (p.Position, Weight: (background.R - p.Color.R) / (double)(background.R - line.R))).ToList();
+        var coverage = weights.Sum(p => p.Weight);
+        return (coverage, coverage > 0 ? weights.Sum(p => p.Position * p.Weight) / coverage : 0);
+    }
+    bool Single(double coverage) => coverage is > 0.85 and < 1.15;
+    var edges = true;
+    for (var c = 0; c < 3; c++)
+    {
+        var expected = (int)Math.Round(origin.X + grid.Surface.Columns.Right(c) * scale) - 1;
+        var header = Stroke(Enumerable.Range(expected - 2, 5).Select(x => (x, Pixel(x, yHeader))), headBg);
+        var body = Stroke(Enumerable.Range(expected - 2, 5).Select(x => (x, Pixel(x, yBody))), bg);
+        edges &= Single(header.Coverage) && Single(body.Coverage) && Math.Abs(header.Center - body.Center) < 0.5;
+    }
+    Check(edges, $"границы колонок совпадают в шапке и теле, без удвоения при {Scaling.Current:P0}");
+    var xBody = (int)Math.Round(origin.X + 4 * scale);
+    var yLine = (int)Math.Round(origin.Y + (grid.Surface.HeaderHeight + grid.Surface.RowPitch * 4) * scale) - 1;
+    var horizontal = Stroke(Enumerable.Range(yLine - 2, 5).Select(y => (y, Pixel(xBody, y))), bg);
+    Check(Single(horizontal.Coverage), $"горизонтальная граница строки без удвоения при {Scaling.Current:P0}");
+}
+
+void MouseTap(Window window, Visual target, Point point)
+{
+    var p = target.TranslatePoint(point, window)!.Value;
+    window.MouseMove(p);
+    window.MouseDown(p, MouseButton.Left);
+    window.MouseUp(p, MouseButton.Left);
+    Pump(TimeSpan.FromMilliseconds(100));
+}
+
+void MouseDrag(Window window, Visual target, Vector delta)
+{
+    var p = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), window)!.Value;
+    window.MouseMove(p);
+    window.MouseDown(p, MouseButton.Left);
+    window.MouseMove(p + delta);
+    window.MouseUp(p + delta, MouseButton.Left);
+    Pump(TimeSpan.FromMilliseconds(150));
+}
+
+void OpenLogFilter(Window window, SettingsView settings, string key)
+{
+    var grid = settings.FindControl<ServiceGrid>("LogsGrid")!;
+    var rect = grid.Surface.FilterButtonRect(key);
+    Check(rect is not null, "в заголовке доступен фильтр " + key);
+    if (rect is { } area) MouseTap(window, grid.Surface, area.Center);
 }
 
 void Shot(Window window, string name)
