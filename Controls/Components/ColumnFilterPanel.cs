@@ -13,6 +13,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using PdfLibrary.Controls.Behaviors;
 using PdfLibrary.Core.Library;
+using PdfLibrary.Views;
 using Path = Avalonia.Controls.Shapes.Path;
 
 namespace PdfLibrary.Controls.Components;
@@ -94,9 +95,9 @@ public static class ColumnFilterPanel
 
     private static Control Build(Control host, ColumnFilterSpec spec, Action close)
     {
-        var secondary = (IBrush)host.FindResource("BrushSecondaryText")!;
-        var fontBase  = (double)host.FindResource("FontSizeBase")!;
-        var radius    = (CornerRadius)host.FindResource("RadiusBase")!;
+        var secondary = (IBrush)Res.Required("BrushSecondaryText")!;
+        var fontBase  = (double)Res.Required("FontSizeBase")!;
+        var radius    = (CornerRadius)Res.Required("RadiusBase")!;
         var family    = host.TryFindResource("FontFamilyBase", out var f) ? f as FontFamily : null;
         // Ширины строк и закрепленный справа счетчик — см. FilterValueMetrics.
         var metrics   = new FilterValueMetrics();
@@ -104,7 +105,7 @@ public static class ColumnFilterPanel
         var panel = new StackPanel
         {
             // Общий стандарт всплывающих списков (Controls.axaml).
-            Width   = (double)host.FindResource("PopupContentWidth")!,
+            Width   = (double)Res.Required("PopupContentWidth")!,
             Margin  = new Thickness(12),
             Spacing = 2,
             Cursor  = new Cursor(StandardCursorType.Arrow),
@@ -159,7 +160,7 @@ public static class ColumnFilterPanel
             Watermark    = "Поиск значений...",
             Height       = 30,
             CornerRadius = radius,
-            Background   = Brushes.White,
+            Background   = Res.Brush("BrushBg") ?? Brushes.White,
             Margin       = new Thickness(0, 0, 0, 4),
             VerticalContentAlignment = VerticalAlignment.Center,
         };
@@ -232,15 +233,15 @@ public static class ColumnFilterPanel
         };
         var valuesHost = new Border
         {
-            Background   = Brushes.White,
-            BorderBrush  = (IBrush)host.FindResource("BrushSeparator")!,
+            Background   = Res.Brush("BrushBg") ?? Brushes.White,
+            BorderBrush  = (IBrush)Res.Required("BrushSeparator")!,
             CornerRadius = radius,
             // Padding НУЛЕВОЙ: полосы прокрутки прилегают к краям карточки, воздух вокруг
             // содержимого задает ScrollBarLink.HeaderedList. ClipToBounds срезает углы полос.
             Padding      = new Thickness(0),
             ClipToBounds = true,
             // Фикс высота (стандарт) — список не «прыгает» при замене «Загрузка…».
-            Height       = (double)host.FindResource("PopupListHeight")!,
+            Height       = (double)Res.Required("PopupListHeight")!,
             Child        = loadingText,
         };
         valuesHost.Bind(Border.BorderThicknessProperty, valuesHost.GetResourceObservable("BorderLine"));
@@ -420,7 +421,7 @@ public static class ColumnFilterPanel
     // Пункт сортировки: иконка, подпись и галочка у выбранного.
     private static Button FlatItem(Control host, string text, Action onClick, Geometry icon, bool active = false)
     {
-        var fg = (IBrush)host.FindResource(active ? "BrushAccent" : "BrushPrimaryText")!;
+        var fg = (IBrush)Res.Required(active ? "BrushAccent" : "BrushPrimaryText")!;
 
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
 
@@ -452,9 +453,9 @@ public static class ColumnFilterPanel
             Background                 = Brushes.Transparent,
             BorderThickness            = new Thickness(0),
             Padding                    = new Thickness(8, 6),
-            FontSize                   = (double)host.FindResource("FontSizeBase")!,
+            FontSize                   = (double)Res.Required("FontSizeBase")!,
             Foreground                 = fg,
-            CornerRadius               = (CornerRadius)host.FindResource("RadiusBase")!,
+            CornerRadius               = (CornerRadius)Res.Required("RadiusBase")!,
             HorizontalAlignment        = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
         };
@@ -467,7 +468,7 @@ public static class ColumnFilterPanel
     {
         var sep = new Border
         {
-            Background = (IBrush)host.FindResource("BrushSeparator")!,
+            Background = (IBrush)Res.Required("BrushSeparator")!,
             Margin     = new Thickness(0, 6),
         };
         sep.Bind(Layoutable.HeightProperty, sep.GetResourceObservable("SeparatorThickness"));
@@ -508,7 +509,7 @@ public static class ColumnFilterPanel
             pin.Bind(TranslateTransform.XProperty, new Binding(nameof(FilterValueMetrics.Pin)) { Source = metrics });
             var cntHost = new Border
             {
-                Background          = Brushes.White,
+                Background          = Res.Brush("BrushBg") ?? Brushes.White,
                 Padding             = new Thickness(FilterValueMetrics.Gap, 0, 0, 0),
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Child               = cnt,

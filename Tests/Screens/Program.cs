@@ -62,6 +62,10 @@ try
 
     AppSettings.EnsureCreated();
     PdfLibrary.Logging.AppLog.Init();
+    for (var i = 0; i < 230; i++) Serilog.Log.Information("Таблица диагностики: запись {Index:D3}", i);
+    Serilog.Log.Warning("Таблица диагностики: предупреждение");
+    Serilog.Log.Error(new InvalidOperationException("Полный текст исключения для проверки панели деталей"),
+                      "Таблица диагностики: ошибка для проверки деталей");
     Serilog.Log.Information("Запуск программы, версия {Version:l} (стенд экранов)", AppSettings.AppVersion);
     var store = LibraryStore.Open(AppSettings.LibraryDbPath);
     AppSettings.AttachStore(store);
@@ -266,11 +270,63 @@ try
         Pump(TimeSpan.FromMilliseconds(800));
         var groups = settings.GetVisualDescendants().OfType<Border>()
             .Where(b => b.IsEffectivelyVisible && b.Classes.Contains("group")).ToList();
-        Check(groups.Count > 0 && groups.All(b => b.Bounds.Width > settings.Bounds.Width - 64),
-              $"блоки настроек на всю ширину: {keys[i]}");
+        if (keys[i] != "diagnostics")
+            Check(groups.Count > 0 && groups.All(b => b.Bounds.Width > settings.Bounds.Width - 64),
+                  $"блоки настроек на всю ширину: {keys[i]}");
         Shot(window, $"{09 + i:D2}-settings-{i + 1}");
         if (keys[i] == "diagnostics")
+        {
+            var logs = settings.FindControl<DataGrid>("LogsGrid")!;
+            List<LogRowView> LogRows() => logs.ItemsSource.Cast<LogRowView>().ToList();
+            Until(() => LogRows().Count >= 200, "первая страница таблицы диагностики", TimeSpan.FromSeconds(15));
+            Check(LogRows().Count == 200, "первая страница журнала ограничена 200 записями");
+            Check(logs.Columns.Count == 4 && logs.IsReadOnly && logs.GridLinesVisibility == DataGridGridLinesVisibility.All,
+                  "диагностика показывает четыре колонки с границами ячеек");
+            Check(logs.Bounds.Width > settings.Bounds.Width - 20 && logs.Bounds.Height > 300,
+                  "таблица диагностики занимает доступную ширину и высоту");
             Check(Texts(settings).Any(t => t.StartsWith("Журнал хранится в logs.db")), "диагностика читает журнал");
+            logs.ScrollIntoView(LogRows()[190], logs.Columns[0]);
+            Until(() => LogRows().Count > 200, "подгрузка следующей страницы журнала", TimeSpan.FromSeconds(10));
+            Check(LogRows().Select(r => r.Row.Id).Distinct().Count() == LogRows().Count, "при подгрузке нет повторяющихся записей");
+            var errorRow = LogRows().First(r => r.Message == "Таблица диагностики: ошибка для проверки деталей");
+            logs.SelectedItem = errorRow;
+            logs.ScrollIntoView(errorRow, logs.Columns[0]);
+            Pump(TimeSpan.FromMilliseconds(300));
+            Check(settings.FindControl<DockPanel>("LogDetailPanel")!.IsVisible &&
+                  settings.FindControl<SelectableTextBlock>("LogDetailText")!.Text == errorRow.Message,
+                  "выбор записи открывает справа полный текст сообщения");
+            var fields = settings.FindControl<ListBox>("LogDetailFields")!;
+            fields.SelectedItem = fields.ItemsSource!.Cast<LogDetailField>().Single(f => f.Key == "exception");
+            Pump(TimeSpan.FromMilliseconds(200));
+            Check(settings.FindControl<SelectableTextBlock>("LogDetailText")!.Text == errorRow.Detail,
+                  "панель деталей показывает полное исключение");
+            Shot(window, "13a-diagnostics-details");
+            Click(settings, null, "Закрыть детали записи");
+            Click(settings, null, "Фильтр и сортировка: Уровень");
+            Pump(TimeSpan.FromMilliseconds(300));
+            var filter = (Visual)settings.LogFilterPopup!.Content!;
+            var search = filter.GetVisualDescendants().OfType<TextBox>().Single();
+            search.Text = "Ошибка";
+            Pump(TimeSpan.FromMilliseconds(200));
+            Click(filter, "Готово");
+            Until(() => LogRows().Count > 0 && LogRows().All(r => r.Row.Level == "Error"), "фильтр уровня журнала", TimeSpan.FromSeconds(10));
+            Check(LogRows().Any(r => r.Row.Id == errorRow.Row.Id), "фильтр уровня сохраняет нужную запись");
+            Click(settings, null, "Фильтр и сортировка: Уровень");
+            Pump(TimeSpan.FromMilliseconds(300));
+            filter = (Visual)settings.LogFilterPopup!.Content!;
+            filter.GetVisualDescendants().OfType<CheckBox>().Single(c => Equals(c.Content, "(Выделить все)")).IsChecked = true;
+            Click(filter, "Готово");
+            Until(() => LogRows().Count >= 200, "снятие фильтра журнала", TimeSpan.FromSeconds(10));
+            Click(settings, null, "Фильтр и сортировка: Сообщение");
+            Pump(TimeSpan.FromMilliseconds(300));
+            filter = (Visual)settings.LogFilterPopup!.Content!;
+            Click(filter, "От А до Я");
+            Click(filter, "Готово");
+            Until(() => LogRows().Count > 1 && LogRows().First().Row.Id != errorRow.Row.Id, "сортировка журнала", TimeSpan.FromSeconds(10));
+            Check(LogRows().Select(r => r.Message).SequenceEqual(LogRows().Select(r => r.Message).Order(StringComparer.Ordinal)),
+                  "сортировка заголовка применяется ко всей странице журнала");
+            Shot(window, "13b-diagnostics-table");
+        }
         if (keys[i] == "look")
         {
             var labels = Texts(settings).ToHashSet();
@@ -330,6 +386,14 @@ try
     sections.Select("look");
     Pump(TimeSpan.FromMilliseconds(500));
     Shot(window, "15-settings-look-dark");
+    sections.Select("diagnostics");
+    Until(() => settings.FindControl<DataGrid>("LogsGrid")!.ItemsSource.Cast<LogRowView>().Any(),
+          "таблица диагностики в темной теме", TimeSpan.FromSeconds(10));
+    Click(settings, null, "Фильтр и сортировка: Уровень");
+    Pump(TimeSpan.FromMilliseconds(300));
+    Check(settings.LogFilterPopup?.IsOpen == true, "фильтр таблицы открывается и в темной теме");
+    settings.LogFilterPopup?.Hide();
+    Shot(window, "15a-diagnostics-dark");
     Click(window, null, "Библиотека");
     Pump(TimeSpan.FromMilliseconds(800));
     Check(reader.IsVisible, "панель чтения осталась открытой после настроек");

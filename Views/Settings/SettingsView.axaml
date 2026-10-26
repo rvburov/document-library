@@ -92,47 +92,24 @@
             <Setter Property="TextBlock.TextDecorations" Value="Underline" />
         </Style>
 
-        <!-- Строка журнала: подсветка под мышью, раскрытая — голубая. -->
-        <Style Selector="Border.logrow">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Cursor"     Value="Hand" />
+        <Style Selector="DataGrid.logtable DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource BrushBg}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FontWeight" Value="Normal" />
         </Style>
-        <Style Selector="Border.logrow:pointerover">
-            <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
+        <Style Selector="DataGrid.logtable DataGridCell">
+            <Setter Property="Padding" Value="8,0" />
         </Style>
-        <Style Selector="Border.logrow.open">
-            <Setter Property="Background" Value="{DynamicResource BrushAccentLight}" />
-        </Style>
-
-        <!-- Уровень записи журнала — чипом. -->
-        <Style Selector="Border.chip">
-            <Setter Property="CornerRadius" Value="99" />
-        </Style>
-        <Style Selector="Border.chip > TextBlock">
-            <Setter Property="FontSize"   Value="{DynamicResource FontSizeSmall}" />
-            <Setter Property="FontWeight" Value="{StaticResource FontWeightBold}" />
-        </Style>
-        <Style Selector="Border.chip.red">
-            <Setter Property="Background" Value="{DynamicResource BrushRedLight}" />
-        </Style>
-        <Style Selector="Border.chip.red > TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource BrushRed}" />
-        </Style>
-        <Style Selector="Border.chip.orange">
-            <Setter Property="Background" Value="{DynamicResource BrushOrangeLight}" />
-        </Style>
-        <Style Selector="Border.chip.orange > TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource BrushOrange}" />
-        </Style>
-        <Style Selector="Border.chip.gray">
-            <Setter Property="Background" Value="{DynamicResource BrushSecondaryBg}" />
-        </Style>
-        <Style Selector="Border.chip.gray > TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource BrushSecondaryText}" />
+        <Style Selector="DataGrid.logtable DataGridCell TextBlock">
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
     </UserControl.Styles>
 
-    <DockPanel>
+    <Grid x:Name="SettingsLayout" ColumnDefinitions="*,Auto,0">
+    <DockPanel Grid.Column="0">
 
         <!-- Шапка раздела: высота навбара, отступ 16 — как у навбара ленты. -->
         <Grid DockPanel.Dock="Top" Height="56" Margin="16,0" ColumnDefinitions="*,Auto">
@@ -172,6 +149,7 @@
         </Grid>
         <!-- Линию под шапкой рисует главное окно (на высоте 56 через всю ширину). -->
 
+        <Grid>
         <ScrollViewer x:Name="Scroll" HorizontalScrollBarVisibility="Disabled">
             <Panel Margin="16,0,16,32">
 
@@ -528,68 +506,6 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- ══ Диагностика ════════════════════════════════════════ -->
-                    <StackPanel x:Name="Diagnostics" IsVisible="False">
-                        <TextBlock Classes="muted" FontSize="{DynamicResource FontSizeBase}" TextWrapping="Wrap" Margin="0,14,0,10"
-                                   Text="Журнал работы программы: запуск, проверка папок, чтение документов и ошибки. Если что-то пошло не так, выгрузите журнал и приложите к обращению." />
-                        <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,8">
-                            <Border Classes="modeseg">
-                                <StackPanel x:Name="LevelSegment" Orientation="Horizontal" />
-                            </Border>
-                            <TextBlock x:Name="LogCount" Grid.Column="1" Classes="small muted" Margin="12,0,0,0"
-                                       VerticalAlignment="Center" />
-                        </Grid>
-                        <Border Classes="group">
-                            <StackPanel>
-                                <Border Background="{DynamicResource BrushSecondaryBg}" Padding="14,6"
-                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}">
-                                    <Grid ColumnDefinitions="130,130,*">
-                                        <TextBlock Text="Время" Classes="small muted bold" />
-                                        <TextBlock Grid.Column="1" Text="Уровень" Classes="small muted bold" />
-                                        <TextBlock Grid.Column="2" Text="Сообщение" Classes="small muted bold" />
-                                    </Grid>
-                                </Border>
-                                <ItemsControl x:Name="LogRows">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="s:LogRowView">
-                                            <StackPanel>
-                                                <Border Classes="logrow" Classes.open="{Binding IsOpen}" Height="34" Padding="14,0"
-                                                        Tapped="OnLogRowTapped">
-                                                    <Grid ColumnDefinitions="130,130,*">
-                                                        <TextBlock Text="{Binding Time}" Classes="small muted" VerticalAlignment="Center" />
-                                                        <Border Grid.Column="1" Classes="chip" Classes.red="{Binding IsError}"
-                                                                Classes.orange="{Binding IsWarning}" Classes.gray="{Binding IsInfo}"
-                                                                HorizontalAlignment="Left" Padding="8,2">
-                                                            <TextBlock Text="{Binding Level}" />
-                                                        </Border>
-                                                        <TextBlock Grid.Column="2" Text="{Binding Message}" FontSize="{DynamicResource FontSizeBase}"
-                                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                    </Grid>
-                                                </Border>
-                                                <Border IsVisible="{Binding IsOpen}" Padding="14,10" Background="{DynamicResource BrushInactiveBg}"
-                                                        BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}">
-                                                    <StackPanel Spacing="6">
-                                                        <SelectableTextBlock Text="{Binding Message}" FontSize="{DynamicResource FontSizeBase}" TextWrapping="Wrap" />
-                                                        <SelectableTextBlock Text="{Binding Detail}" Classes="small" TextWrapping="Wrap"
-                                                                             Foreground="{DynamicResource BrushSecondaryText}"
-                                                                             IsVisible="{Binding HasDetail}" />
-                                                        <Button Classes="link" Content="Скопировать" FontSize="{DynamicResource FontSizeBase}"
-                                                                Click="OnCopyLog" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <TextBlock x:Name="NoLogs" Classes="small muted" Margin="14,12" IsVisible="False"
-                                           Text="Записей нет." />
-                                <Button x:Name="MoreLogs" Classes="link" FontSize="{DynamicResource FontSizeBase}" Margin="14,10"
-                                        Content="Показать еще" Click="OnMoreLogs" IsVisible="False" />
-                            </StackPanel>
-                        </Border>
-                        <TextBlock x:Name="LogNote" Classes="note" />
-                    </StackPanel>
-
                     <!-- ══ О программе ════════════════════════════════════════ -->
                     <StackPanel x:Name="About" IsVisible="False">
                         <Border Classes="group" Padding="16" Margin="0,22,0,0">
@@ -665,5 +581,75 @@
                     </StackPanel>
             </Panel>
         </ScrollViewer>
+        <!-- Журнал занимает всю доступную область; фильтры и сортировка — в заголовках. -->
+        <Grid x:Name="Diagnostics" IsVisible="False" RowDefinitions="*,Auto">
+            <Panel>
+                <DataGrid x:Name="LogsGrid" Classes="logtable"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserSortColumns="False" CanUserReorderColumns="False" CanUserResizeColumns="True"
+                          SelectionMode="Single" HeadersVisibility="Column"
+                          GridLinesVisibility="All" BorderThickness="0"
+                          RowHeight="{StaticResource RowHeightStandard}" ColumnHeaderHeight="{StaticResource RowHeightStandard}"
+                          Background="{DynamicResource BrushBg}" RowBackground="{DynamicResource BrushBg}"
+                          Foreground="{DynamicResource BrushPrimaryText}"
+                          FontSize="{DynamicResource FontSizeBase}" FontFamily="{StaticResource FontFamilyBase}"
+                          HorizontalGridLinesBrush="{DynamicResource BrushSeparator}"
+                          VerticalGridLinesBrush="{DynamicResource BrushSeparator}" />
+                <TextBlock x:Name="NoLogs" IsVisible="False" Text="Записей пока нет."
+                           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="16,52,16,0"
+                           Foreground="{DynamicResource BrushSecondaryText}" />
+            </Panel>
+            <Border Grid.Row="1" Padding="8,5" Background="{DynamicResource BrushSecondaryBg}">
+                <Grid ColumnDefinitions="Auto,*">
+                    <TextBlock x:Name="LogCount" Classes="small muted" Margin="0,0,16,0" />
+                    <TextBlock Grid.Column="1" x:Name="LogNote" Classes="small muted" TextTrimming="CharacterEllipsis" />
+                </Grid>
+            </Border>
+        </Grid>
+        </Grid>
     </DockPanel>
+    <GridSplitter Grid.Column="1" x:Name="LogDetailSplitter" IsVisible="False"
+                  Width="5" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                  Background="{DynamicResource BrushSeparator}" />
+    <DockPanel Grid.Column="2" x:Name="LogDetailPanel" IsVisible="False" Background="{DynamicResource BrushBg}">
+        <Grid DockPanel.Dock="Top" Height="56" Margin="16,0" ColumnDefinitions="*,Auto">
+            <TextBlock Text="Детали" VerticalAlignment="Center"
+                       FontSize="{DynamicResource FontSizeLarge}" FontWeight="{StaticResource FontWeightBold}" />
+            <Button Grid.Column="1" Classes="navbtn" Width="30" Height="30" VerticalAlignment="Center"
+                    ToolTip.Tip="Закрыть детали записи" Click="OnCloseLogDetail">
+                <Viewbox Width="16" Height="16">
+                    <Canvas Width="24" Height="24">
+                        <Path Data="{StaticResource IconClose}" Stroke="{Binding $parent[Button].Foreground}"
+                              StrokeThickness="{StaticResource IconStrokeMedium}" StrokeLineCap="Round" StrokeJoin="Round" />
+                    </Canvas>
+                </Viewbox>
+            </Button>
+        </Grid>
+        <Grid RowDefinitions="Auto,Auto,*,Auto,*" Margin="16,0,16,16">
+            <Border Classes="separator h" />
+            <TextBlock Grid.Row="1" Classes="h2" Text="СВОЙСТВА" />
+            <ListBox Grid.Row="2" x:Name="LogDetailFields" Background="Transparent" Padding="0"
+                     SelectionChanged="OnLogDetailFieldChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="s:LogDetailField">
+                        <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="{DynamicResource BorderLineBottom}"
+                                Padding="8,10">
+                            <Grid ColumnDefinitions="110,*">
+                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource BrushSecondaryText}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,12,0,8">
+                <TextBlock x:Name="LogDetailTitle" VerticalAlignment="Center" Foreground="{DynamicResource BrushSecondaryText}" />
+                <Button Grid.Column="1" Classes="link" Content="Скопировать" Click="OnCopyLogDetail" />
+            </Grid>
+            <ScrollViewer Grid.Row="4" HorizontalScrollBarVisibility="Disabled">
+                <SelectableTextBlock x:Name="LogDetailText" TextWrapping="Wrap" FontSize="{DynamicResource FontSizeBase}" />
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+    </Grid>
 </UserControl>

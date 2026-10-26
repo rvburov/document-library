@@ -23,4 +23,8 @@ public static class Res
     public static Geometry? Icon(string key) => Get(key) as Geometry;
 
     public static IBrush? Brush(string key) => Get(key) as IBrush;
+
+    /// <summary>Обязательный ресурс с учетом активного варианта темы.</summary>
+    public static object Required(string key) => Get(key) is { } value && value != AvaloniaProperty.UnsetValue
+        ? value : throw new KeyNotFoundException($"Resource '{key}' not found.");
 }

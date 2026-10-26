@@ -20,6 +20,7 @@
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
 
         <!-- Иконка программы для всех окон: заголовок, панель задач, Alt-Tab. .ico, а не .png:
              Win32 сам берет готовый слой нужного размера, и значок не выходит мыльным. На macOS

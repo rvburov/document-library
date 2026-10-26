@@ -11,6 +11,13 @@ namespace PdfLibrary.Tests.Unit;
 /// </summary>
 public sealed class SmallPartsTests
 {
+    [Fact]
+    public void Log_timestamp_has_seconds_in_local_time()
+    {
+        var utc = new DateTime(2026, 10, 26, 9, 51, 48, DateTimeKind.Utc);
+        Assert.Equal(utc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"), LogLabels.FormatTs("2026-10-26 09:51:48"));
+    }
+
     [Theory]
     [InlineData("~$Отчет.pdf", true)]
     [InlineData("Отчет.pdf", false)]

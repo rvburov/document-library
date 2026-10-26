@@ -26,7 +26,7 @@ public static class LogLabels
         Levels.TryGetValue(level, out var label) ? label : level;
 
     /// <summary>
-    /// Метка времени Serilog (UTC, без суффикса Z) → локальное «дд.MM.гггг ЧЧ:мм».
+    /// Метка времени Serilog (UTC, без суффикса Z) → локальное «дд.MM.гггг ЧЧ:мм:сс».
     /// AssumeUniversal обязателен: иначе строка «2026-08-15 20:39:37» разобралась бы
     /// как местное время и сдвинулась бы на часовой пояс.
     /// </summary>
@@ -34,6 +34,6 @@ public static class LogLabels
         DateTime.TryParse(ts, System.Globalization.CultureInfo.InvariantCulture,
                           System.Globalization.DateTimeStyles.AssumeUniversal |
                           System.Globalization.DateTimeStyles.AdjustToUniversal, out var dt)
-            ? dt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+            ? dt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")
             : ts;
 }

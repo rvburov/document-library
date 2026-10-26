@@ -24,24 +24,6 @@ namespace PdfLibrary.Views.Settings;
 public sealed record FolderRow(int Id, string Name, string Path, string CountText, string Status,
                                IBrush? StatusBrush, IBrush? Dot, int Rank);
 
-/// <summary>Строка журнала на экране «Диагностика».</summary>
-public sealed partial class LogRowView : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
-{
-    public LogReader.LogRow Row { get; init; } = null!;
-    public string Time => LogLabels.FormatTs(Row.Timestamp);
-    public string Level => LogLabels.LevelLabel(Row.Level);
-    public string Message => Row.Message;
-    public string Detail => Row.Exception ?? "";
-    public bool HasDetail => Detail.Length > 0;
-    public bool IsError => Row.Level is "Error" or "Fatal";
-    public bool IsWarning => Row.Level == "Warning";
-    public bool IsInfo => !IsError && !IsWarning;
-    /// <summary>Цвет уровня: ошибка красная, предупреждение оранжевое, прочее серое.</summary>
-    public IBrush LevelBrush => Res.Brush(IsError ? "BrushRed" : IsWarning ? "BrushOrange" : "BrushSecondaryText")
-                                ?? Brushes.Gray;
-    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _isOpen;
-}
-
 /// <summary>Экран «Настройки»: разметка в SettingsView.axaml, здесь — разделы и их действия.</summary>
 public partial class SettingsView : UserControl
 {
@@ -65,12 +47,8 @@ public partial class SettingsView : UserControl
     private LibraryService? _library;
     private Section _section = Section.General;
     private string _folderFilter = "all";
-    private string _levelFilter = "all";
-    private LogReader.LogQuery _logQuery = new();
-    private readonly List<LogRowView> _logRows = [];
     private bool _syncing;
 
-    private const int LogPage = 200;
 
     public SettingsView()
     {
@@ -118,6 +96,8 @@ public partial class SettingsView : UserControl
         Diagnostics.IsVisible = section == Section.Diagnostics;
         About.IsVisible = section == Section.About;
         DiagActions.IsVisible = section == Section.Diagnostics;
+        Scroll.IsVisible = section != Section.Diagnostics;
+        if (section != Section.Diagnostics) { LogFilterPopup?.Hide(); CloseLogDetail(); }
         Scroll.Offset = default;
 
         switch (section)
@@ -126,7 +106,7 @@ public partial class SettingsView : UserControl
             case Section.Sources: FillMaxFile(); RefreshFolders(); _ = RefreshCacheAsync(); break;
             case Section.Cards: BuildCardControls(); break;
             case Section.Look: BuildLookControls(); break;
-            case Section.Diagnostics: BuildLevelFilter(); _ = LoadLogAsync(reset: true); break;
+            case Section.Diagnostics: BuildLogsTable(); _ = LoadLogAsync(reset: true); break;
             case Section.About: FillAbout(); break;
         }
     }
@@ -384,63 +364,6 @@ public partial class SettingsView : UserControl
 
     // ── Диагностика ───────────────────────────────────────────────────────────
 
-    private void BuildLevelFilter()
-    {
-        LevelSegment.Children.Clear();
-        foreach (var (label, level) in new[] { ("Все", "all"), ("Ошибки", "errors"), ("Предупреждения", "warnings") })
-            LevelSegment.Children.Add(Segment(label, level == _levelFilter, () =>
-            {
-                _levelFilter = level;
-                BuildLevelFilter();
-                _ = LoadLogAsync(reset: true);
-            }));
-    }
-
-    private LogReader.LogQuery LevelQuery() => _levelFilter switch
-    {
-        "errors"   => new LogReader.LogQuery { Filters = new Dictionary<string, IReadOnlyCollection<string>> { ["level"] = ["Error", "Fatal"] } },
-        "warnings" => new LogReader.LogQuery { Filters = new Dictionary<string, IReadOnlyCollection<string>> { ["level"] = ["Warning"] } },
-        _          => new LogReader.LogQuery(),
-    };
-
-    private async Task LoadLogAsync(bool reset)
-    {
-        var reader = new LogReader(AppSettings.LogsDbPath);
-        if (reset)
-        {
-            _logRows.Clear();
-            _logQuery = LevelQuery();
-        }
-        var page = await reader.GetPageAsync(_logQuery, LogPage);
-        _logRows.AddRange(page.Select(r => new LogRowView { Row = r }));
-        if (page.Count > 0) _logQuery = _logQuery with { AfterId = page[^1].Id };
-        LogRows.ItemsSource = null;
-        LogRows.ItemsSource = _logRows;
-        NoLogs.IsVisible = _logRows.Count == 0;
-        MoreLogs.IsVisible = page.Count == LogPage;
-
-        var count = await reader.CountAsync(LevelQuery());
-        LogCount.Text = $"{count:N0} {Plural.Of((int)Math.Min(count, int.MaxValue), "запись", "записи", "записей")}";
-        long bytes;
-        try { bytes = File.Exists(AppSettings.LogsDbPath) ? new FileInfo(AppSettings.LogsDbPath).Length : 0; }
-        catch { bytes = 0; }
-        LogNote.Text = $"Журнал хранится в logs.db ({Sizes.Text(bytes)}). Записи старше 30 дней удаляются сами.";
-    }
-
-    private void OnMoreLogs(object? sender, RoutedEventArgs e) => _ = LoadLogAsync(reset: false);
-
-    private void OnLogRowTapped(object? sender, TappedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is LogRowView row) row.IsOpen = !row.IsOpen;
-    }
-
-    private async void OnCopyLog(object? sender, RoutedEventArgs e)
-    {
-        if ((sender as Control)?.DataContext is not LogRowView row || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard) return;
-        await clipboard.SetTextAsync($"{row.Time} {row.Level}\n{row.Message}\n{row.Detail}".TrimEnd());
-        MainWindow.NoticeOf(this, "Запись журнала скопирована.");
-    }
-
     private async void OnExportLog(object? sender, RoutedEventArgs e)
     {
         if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
@@ -454,7 +377,7 @@ public partial class SettingsView : UserControl
         try
         {
             var reader = new LogReader(AppSettings.LogsDbPath);
-            var query = LevelQuery();
+            var query = LogsQuery();
             var count = await Task.Run(() => LogCsv.Write(path, reader.ReadCsvRows(query)));
             MainWindow.NoticeOf(this, $"Журнал выгружен: {count:N0} записей в {path}");
         }

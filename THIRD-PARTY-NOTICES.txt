@@ -10,7 +10,7 @@ Apache License 2.0 (см. файл LICENSE). Она включает в себя
 
 Перечень построен по фактическому составу поставки: объединение файлов
 PdfLibrary.deps.json публикаций под win-x64, linux-x64 и osx-arm64
-(компонентов: 53). Тестовые зависимости и инструменты разработки (в том числе
+(компонентов: 54). Тестовые зависимости и инструменты разработки (в том числе
 Microsoft.EntityFrameworkCore.Design) в поставку не входят и здесь не
 перечислены.
 
@@ -60,7 +60,7 @@ Microsoft.EntityFrameworkCore.Design) в поставку не входят и �
 Avalonia.Angle.Windows.Natives (ANGLE, BSD 3-Clause) и Serilog.Sinks.SQLite
 (Apache 2.0).
 
-### MIT — компонентов: 45
+### MIT — компонентов: 46
 
   Avalonia 11.2.3
       Copyright 2013-2024 © The AvaloniaUI Project
@@ -68,6 +68,9 @@ Avalonia.Angle.Windows.Natives (ANGLE, BSD 3-Clause) и Serilog.Sinks.SQLite
   Avalonia.Desktop 11.2.3
       Copyright 2013-2024 © The AvaloniaUI Project
       https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+  Avalonia.Controls.DataGrid 11.2.3
+      Copyright 2013-2024 © The AvaloniaUI Project
+      https://avaloniaui.net/
   Avalonia.Fonts.Inter 11.2.3
       Copyright 2013-2024 © The AvaloniaUI Project
       https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
